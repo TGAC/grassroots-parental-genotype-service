@@ -1,18 +1,28 @@
 /*
- * dfw_field_trial_service.h
+ * parental_genotype_service.h
  *
  *  Created on: 13 Jul 2018
  *      Author: billy
  */
 
-#ifndef SERVICES_DFW_FIELD_TRIAL_SERVICE_INCLUDE_DFW_FIELD_TRIAL_SERVICE_H_
-#define SERVICES_DFW_FIELD_TRIAL_SERVICE_INCLUDE_DFW_FIELD_TRIAL_SERVICE_H_
+#ifndef SERVICES_PARENTAL_GENOTYPE_SERVICE_INCLUDE_PARENTAL_GENOTYPE_SERVICE_H_
+#define SERVICES_PARENTAL_GENOTYPE_SERVICE_INCLUDE_PARENTAL_GENOTYPE_SERVICE_H_
 
 
-#include "dfw_field_trial_service_library.h"
+#include "parental_genotype_service_library.h"
 #include "service.h"
 
 
+
+
+
+PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_CHROMOSOME_S PARENTAL_GENOTYPE_SERVICE_VAL ("chromosome");
+
+PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_MAPPING_POSITION_S PARENTAL_GENOTYPE_SERVICE_VAL ("mapping_position");
+
+PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_PARENT_A_S PARENTAL_GENOTYPE_SERVICE_VAL ("parent_a");
+
+PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_PARENT_B_S PARENTAL_GENOTYPE_SERVICE_VAL ("parent_b");
 
 
 #ifdef __cplusplus
@@ -31,7 +41,7 @@ extern "C"
  *
  * @ingroup dfw_field_trial_service
  */
-DFW_FIELD_TRIAL_SERVICE_API ServicesArray *GetServices (UserDetails *user_p);
+PARENTAL_GENOTYPE_SERVICE_API ServicesArray *GetServices (UserDetails *user_p);
 
 
 /**
@@ -41,15 +51,15 @@ DFW_FIELD_TRIAL_SERVICE_API ServicesArray *GetServices (UserDetails *user_p);
  *
  * @ingroup dfw_field_trial_service
  */
-DFW_FIELD_TRIAL_SERVICE_API void ReleaseServices (ServicesArray *services_p);
+PARENTAL_GENOTYPE_SERVICE_API void ReleaseServices (ServicesArray *services_p);
 
 
 
-DFW_FIELD_TRIAL_SERVICE_LOCAL bool AddErrorMessage (ServiceJob *job_p, const json_t *value_p, const char *error_s, const int index);
+PARENTAL_GENOTYPE_SERVICE_LOCAL bool AddErrorMessage (ServiceJob *job_p, const json_t *value_p, const char *error_s, const int index);
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif /* SERVICES_DFW_FIELD_TRIAL_SERVICE_INCLUDE_DFW_FIELD_TRIAL_SERVICE_H_ */
+#endif /* SERVICES_PARENTAL_GENOTYPE_SERVICE_INCLUDE_PARENTAL_GENOTYPE_SERVICE_H_ */

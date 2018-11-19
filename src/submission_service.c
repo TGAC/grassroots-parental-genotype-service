@@ -20,25 +20,22 @@
  *      Author: billy
  */
 
+#include <string.h>
 
 #include "submission_service.h"
-#include "plot_jobs.h"
-#include "field_trial_jobs.h"
-#include "experimental_area_jobs.h"
-#include "material_jobs.h"
-#include "location_jobs.h"
-#include "gene_bank_jobs.h"
-#include "phenotype_jobs.h"
-#include "row_jobs.h"
+#include "parental_genotype_service.h"
 
 #include "audit.h"
 #include "streams.h"
 #include "math_utils.h"
 #include "string_utils.h"
+#include "schema_keys.h"
 
 /*
  * Static declarations
  */
+
+static const char * const S_ID_S = "id";
 
 static NamedParameterType S_SET_NAME = { "Name", PT_STRING };
 static NamedParameterType S_SET_DATA = { "Data", PT_TABLE };
@@ -61,6 +58,16 @@ static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service *se
 static bool CloseParentalGenotypeSubmissionService (Service *service_p);
 
 static ServiceMetadata *GetParentalGenotypeSubmissionServiceMetadata (Service *service_p);
+
+
+
+static bool AddChromosomes (json_t *doc_p, json_t *chromosomes_p);
+
+static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p);
+
+static const char *AddParentRow (json_t *doc_p, json_t *genotypes_p, const char *key_s);
+
+static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p);
 
 
 /*
@@ -141,7 +148,7 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 			SharedType def;
 			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Field Trials", NULL, false, data_p, param_set_p);
 
-			InitSharedType (def);
+			InitSharedType (&def);
 
 			def.st_string_value_s = NULL;
 
@@ -208,12 +215,11 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 			if (param_set_p)
 				{
 					SharedType name_value;
-					const char *name_s = NULL;
-
 					InitSharedType (&name_value);
 
 					if (GetParameterValueFromParameterSet (param_set_p, S_SET_NAME.npt_name_s, &name_value, true))
 						{
+							const char *name_s = NULL;
 							SharedType data_value;
 							InitSharedType (&data_value);
 
@@ -228,7 +234,6 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 									 */
 									if (! (IsStringEmpty (data_s)))
 										{
-											bool success_flag = false;
 											json_error_t e;
 											json_t *data_json_p = NULL;
 
@@ -240,6 +245,8 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 											if (data_json_p)
 												{
+													json_t *doc_p = json_object ();
+
 													/*
 														The organisation is:
 														1 row = marker name
@@ -252,8 +259,77 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 														We abbreviate the population names from correctly: "Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]".
 														The code 1190xxx was the original number these lines were stored in the germplasm resource unit.
 													 */
+													if (json_is_array (data_json_p))
+														{
+															const size_t num_rows = json_array_size (data_json_p);
 
+															/*
+															 * There are 2 header rows, so the actual genotype data doesn't
+															 * start until row 3
+															 */
+															if (num_rows >= 3)
+																{
+																	/*
+																	 * Since the first row, the marker names, is used as the headers, the first entry should be
+																	 * the chromosome / linkage group name
+																	 */
+																	size_t row_index = 0;
+																	json_t *row_p = json_array_get (data_json_p, row_index);
 
+																	if (AddChromosomes (doc_p, row_p))
+																		{
+																			/*
+																			 * genetic mapping position
+																			 */
+																			row_p = json_array_get (data_json_p, ++ row_index);
+
+																			if (AddGeneticMappingPositions (doc_p, row_p))
+																				{
+																					row_p = json_array_get (data_json_p, ++ row_index);
+																					const char *parent_a_s = AddParentRow (doc_p, row_p, PGS_PARENT_A_S);
+
+																					if (parent_a_s)
+																						{
+																							row_p = json_array_get (data_json_p, ++ row_index);
+																							const char *parent_b_s = AddParentRow (doc_p, row_p, PGS_PARENT_B_S);
+
+																							if (parent_b_s)
+																								{
+																									bool success_flag = true;
+
+																									while ((++ row_index < num_rows) && success_flag)
+																										{
+																											row_p = json_array_get (data_json_p, row_index);
+
+																											if (AddGenotypesRow (doc_p, row_p))
+																												{
+																													++ row_index;
+																												}
+																											else
+																												{
+																													success_flag = false;
+																												}
+
+																										}		/* while ((row_index < num_rows) && success_flag) */
+
+																									if (success_flag)
+																										{
+																											/*
+																											 * Save the document
+																											 */
+																										}
+
+																								}		/* if (parent_b_s) */
+
+																						}		/* if (parent_a_s) */
+
+																				}		/* if (AddGeneticMappingPositions (doc_p, row_p)) */
+
+																		}		/* if (AddChromosomes (doc_p, chromosomes_p)) */
+
+																}		/* if (num_rows >= 3) */
+
+														}		/* if (json_is_array (data_json_p)) */
 
 													json_decref (data_json_p);
 												}		/* if (data_json_p) */
@@ -448,6 +524,181 @@ static ServiceMetadata *GetParentalGenotypeSubmissionServiceMetadata (Service *s
 	return NULL;
 }
 
+
+static bool AddChromosomes (json_t *doc_p, json_t *chromosomes_p)
+{
+	bool success_flag = true;
+	void *iter_p = json_object_iter (chromosomes_p);
+
+	while (iter_p && success_flag)
+		{
+	    const char *key_s = json_object_iter_key (iter_p);
+
+	    if (strcmp (key_s, S_ID_S) != 0)
+	    	{
+	  	    const char *value_s = GetJSONString (chromosomes_p, key_s);
+
+	  	    if (value_s)
+	  	    	{
+	  			    /* use key and value ... */
+	  					json_t *marker_p = json_object ();
+
+	  					if (marker_p)
+	  						{
+	  							if (json_object_set_new (doc_p, key_s, marker_p)  == 0)
+	  								{
+	  									if (!SetJSONString (marker_p, PGS_CHROMOSOME_S, value_s))
+	  										{
+	  											success_flag = false;
+	  										}
+	  								}
+	  							else
+	  								{
+	  									success_flag = false;
+	  									json_decref (marker_p);
+	  								}
+
+	  						}		/* if (marker_p) */
+	  					else
+	  						{
+	  							success_flag = false;
+	  						}
+
+	  	    	}		/* if (value_s) */
+	  	    else
+	  				{
+	  	    		success_flag = false;
+	  				}
+
+	    	}		/* if (strcmp (key_s, S_ID_S) != 0) */
+
+
+
+	    iter_p = json_object_iter_next (chromosomes_p, iter_p);
+		}
+
+	return success_flag;
+}
+
+
+
+static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p)
+{
+	bool success_flag = true;
+	void *iter_p = json_object_iter (mappings_p);
+
+	while (iter_p && success_flag)
+		{
+	    const char *key_s = json_object_iter_key (iter_p);
+
+	    if (strcmp (key_s, S_ID_S) != 0)
+	    	{
+					const char *value_s = GetJSONString (mappings_p, key_s);
+
+					if (value_s)
+						{
+							/* use key and value ... */
+							json_t *marker_p = json_object_get (doc_p, key_s);
+
+							if (marker_p)
+								{
+									if (!SetJSONString (marker_p, PGS_MAPPING_POSITION_S, value_s))
+										{
+											success_flag = false;
+										}
+								}		/* if (marker_p) */
+							else
+								{
+									success_flag = false;
+								}
+
+						}		/* if (value_s) */
+					else
+						{
+							success_flag = false;
+						}
+
+	    	}		/* if (strcmp (key_s, S_ID_S) != 0) */
+
+	    iter_p = json_object_iter_next (mappings_p, iter_p);
+		}
+
+	return success_flag;
+}
+
+
+static const char *AddParentRow (json_t *doc_p, json_t *genotypes_p, const char *key_s)
+{
+	bool success_flag = false;
+	const char *parent_s = GetJSONString (genotypes_p, S_ID_S);
+
+	if (parent_s)
+		{
+			if (SetJSONString (doc_p, key_s, parent_s))
+				{
+					return parent_s;
+				}
+		}
+
+	return NULL;
+}
+
+
+static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p)
+{
+	bool success_flag = true;
+	const char *accession_s = GetJSONString (genotypes_p, S_ID_S);
+
+	if (accession_s)
+		{
+			void *iter_p = json_object_iter (genotypes_p);
+
+			while (iter_p && success_flag)
+				{
+			    const char *key_s = json_object_iter_key (iter_p);
+
+			    if (strcmp (key_s, S_ID_S) != 0)
+			    	{
+							const char *value_s = GetJSONString (genotypes_p, key_s);
+
+							if (value_s)
+								{
+									/* use key and value ... */
+									json_t *marker_p = json_object_get (doc_p, key_s);
+
+									if (marker_p)
+										{
+											if (SetJSONString (marker_p, accession_s, value_s) != 0)
+												{
+													success_flag = false;
+												}
+
+										}		/* if (marker_p) */
+									else
+										{
+											success_flag = false;
+										}
+
+								}		/* if (value_s) */
+							else
+								{
+									success_flag = false;
+								}
+
+			    	}		/* if (strcmp (key_s, S_ID_S) == 0) else ... */
+
+			    iter_p = json_object_iter_next (genotypes_p, iter_p);
+				}
+
+		}		/* if (accession_s) */
+	else
+		{
+			success_flag = false;
+		}
+
+
+	return success_flag;
+}
 
 
 

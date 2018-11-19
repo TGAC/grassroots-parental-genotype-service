@@ -35,10 +35,6 @@
 
 #include "search_service.h"
 #include "submission_service.h"
-#include "field_trial_jobs.h"
-#include "experimental_area_jobs.h"
-#include "location_jobs.h"
-#include "plot_jobs.h"
 
 
 #ifdef _DEBUG

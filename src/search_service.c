@@ -20,13 +20,8 @@
  *      Author: billy
  */
 
-#include "submission_service.h"
-#include "plot_jobs.h"
-#include "field_trial_jobs.h"
-#include "experimental_area_jobs.h"
-#include "material_jobs.h"
-#include "location_jobs.h"
-#include "gene_bank_jobs.h"
+#include "search_service.h"
+
 
 #include "audit.h"
 #include "streams.h"
@@ -143,7 +138,8 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 							else
 								{
 									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "AddSearchLocationParams failed");
-								}						}
+								}
+						}
 					else
 						{
 							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "AddSearchExperimentalAreaParams failed");
