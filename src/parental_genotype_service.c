@@ -17,7 +17,7 @@
 
 #include "jansson.h"
 
-
+#define ALLOCATE_PARENTAL_GENOTYPE_SERVICE_TAGS (1)
 #include "parental_genotype_service.h"
 #include "parental_genotype_service_data.h"
 #include "memory_allocations.h"
