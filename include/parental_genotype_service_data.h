@@ -62,12 +62,20 @@ typedef struct /*PARENTAL_GENOTYPE_SERVICE_LOCAL*/ ParentalGenotypeServiceData
 	 */
 	const char *pgsd_database_s;
 
+
 	/**
 	 * @private
 	 *
 	 * The collection name of use.
 	 */
-	const char *pgsd_collection_s;
+	const char *pgsd_markers_collection_s;
+
+	/**
+	 * @private
+	 *
+	 * The collection name of use.
+	 */
+	const char *pgsd_accessions_collection_s;
 
 } ParentalGenotypeServiceData;
 

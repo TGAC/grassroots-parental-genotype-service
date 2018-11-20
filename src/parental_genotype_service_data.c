@@ -39,7 +39,8 @@ ParentalGenotypeServiceData *AllocateParentalGenotypeServiceData  (void)
 				{
 					data_p -> pgsd_mongo_p = tool_p;
 					data_p -> pgsd_database_s = NULL;
-					data_p -> pgsd_collection_s = NULL;
+					data_p -> pgsd_accessions_collection_s = NULL;
+					data_p -> pgsd_markers_collection_s = NULL;
 
 					return data_p;
 				}
@@ -71,16 +72,17 @@ bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p)
 
 	if (data_p -> pgsd_database_s)
 		{
-			data_p -> pgsd_collection_s = GetJSONString (service_config_p, "collection");
-
-			if (data_p -> pgsd_collection_s)
+			if ((data_p -> pgsd_accessions_collection_s = GetJSONString (service_config_p, "accessions_collection")) != NULL)
 				{
-					if (SetMongoToolDatabaseAndCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s, data_p -> pgsd_collection_s))
+					if ((data_p -> pgsd_markers_collection_s = GetJSONString (service_config_p, "markers_collection")) != NULL)
 						{
-							success_flag = true;
-						} 	/* if (SetMongoToolDatabaseAndCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s, data_p -> pgsd_collection_s)) */
+							if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s))
+								{
+									success_flag = true;
+								}
+						} 	/* if ((data_p -> pgsd_markers_collection_s = GetJSONString (service_config_p, "markers_collection")) != NULL) */
 
-				}		/* if (data_p -> pgsd_collection_s) */
+				}		/* if ((data_p -> pgsd_accessions_collection_s = GetJSONString (service_config_p, "accessions_collection")) != NULL) */
 
 		}		/* if (data_p -> psd_database_s) */
 

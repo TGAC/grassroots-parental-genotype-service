@@ -69,6 +69,12 @@ static const char *AddParentRow (json_t *doc_p, json_t *genotypes_p, const char 
 
 static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p);
 
+static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const char *name_s, const json_t *data_json_p, ParentalGenotypeServiceData *data_p);
+
+static bool SaveAccessions (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p);
+
+static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p);
+
 
 /*
  * API definitions
@@ -209,11 +215,10 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 	if (service_p -> se_jobs_p)
 		{
+			OperationStatus status = OS_FAILED_TO_START;
 			ServiceJob *job_p = GetServiceJobFromServiceJobSet (service_p -> se_jobs_p, 0);
 
 			LogParameterSet (param_set_p, job_p);
-
-			SetServiceJobStatus (job_p, OS_FAILED_TO_START);
 
 			if (param_set_p)
 				{
@@ -246,114 +251,23 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 											 */
 											data_json_p = json_loads (data_s, 0, &e);
 
+											status = OS_FAILED;
+
 											if (data_json_p)
 												{
-													json_t *doc_p = json_object ();
+													const char *parent_a_s = NULL;
+													const char *parent_b_s = NULL;
+													bson_oid_t *id_p = SaveMarkers (&parent_a_s, &parent_b_s, name_s, data_json_p, data_p);
 
-													if (doc_p)
+													if (id_p)
 														{
-															if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s))
+															if (SaveAccessions (parent_a_s, parent_b_s, id_p, data_p))
 																{
-																	/*
-																		The organisation is:
-																		1 row = marker name
-																		2 row = chromosome / linkage group name
-																		3 row = genetic mapping position
-																		4 row = Parent A (always Paragon for this set)
-																		5 row = Parent B (always a Watkins landrace accession in format "Watkins 1190[0-9][0-9][0-9]"
-																		6 to last row = individuals of that population, progenies from the cross of Parent A with Parent B
+																	status = OS_SUCCEEDED;
+																}
+														}		/* if (id_p) */
 
-																		We abbreviate the population names from correctly: "Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]".
-																		The code 1190xxx was the original number these lines were stored in the germplasm resource unit.
-																	 */
-																	if (json_is_array (data_json_p))
-																		{
-																			const size_t num_rows = json_array_size (data_json_p);
-
-																			/*
-																			 * There are 2 header rows, so the actual genotype data doesn't
-																			 * start until row 3
-																			 */
-																			if (num_rows >= 3)
-																				{
-																					/*
-																					 * Since the first row, the marker names, is used as the headers, the first entry should be
-																					 * the chromosome / linkage group name
-																					 */
-																					size_t row_index = 0;
-																					json_t *row_p = json_array_get (data_json_p, row_index);
-
-																					if (AddChromosomes (doc_p, row_p))
-																						{
-																							/*
-																							 * genetic mapping position
-																							 */
-																							row_p = json_array_get (data_json_p, ++ row_index);
-
-																							if (AddGeneticMappingPositions (doc_p, row_p))
-																								{
-																									row_p = json_array_get (data_json_p, ++ row_index);
-																									const char *parent_a_s = AddParentRow (doc_p, row_p, PGS_PARENT_A_S);
-
-																									if (parent_a_s)
-																										{
-																											row_p = json_array_get (data_json_p, ++ row_index);
-																											const char *parent_b_s = AddParentRow (doc_p, row_p, PGS_PARENT_B_S);
-
-																											if (parent_b_s)
-																												{
-																													bool success_flag = true;
-
-																													++ row_index;
-
-																													while ((row_index < num_rows) && success_flag)
-																														{
-																															row_p = json_array_get (data_json_p, row_index);
-
-																															if (AddGenotypesRow (doc_p, row_p))
-																																{
-																																	++ row_index;
-																																}
-																															else
-																																{
-																																	success_flag = false;
-																																}
-
-																														}		/* while ((row_index < num_rows) && success_flag) */
-
-																													if (success_flag)
-																														{
-																															/*
-																															 * Save the document
-																															 */
-																															if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, NULL, NULL))
-																																{
-																																	SetServiceJobStatus (job_p, OS_SUCCEEDED);
-																																}
-																															else
-																																{
-																																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_collection_s);
-																																}
-																														}
-
-																												}		/* if (parent_b_s) */
-
-																										}		/* if (parent_a_s) */
-
-																								}		/* if (AddGeneticMappingPositions (doc_p, row_p)) */
-
-																						}		/* if (AddChromosomes (doc_p, chromosomes_p)) */
-
-																				}		/* if (num_rows >= 3) */
-
-																		}		/* if (json_is_array (data_json_p)) */
-
-																	json_decref (data_json_p);
-																}		/* if (SetJSONString (doc_p, CONTEXT_PREFIX_SCHEMA_ORG_S "name", name_s)) */
-
-															json_decref (doc_p);
-														}		/* if (doc_p) */
-
+													json_decref (data_json_p);
 												}		/* if (data_json_p) */
 
 										}		/* if (! (IsStringEmpty (data_s))) */
@@ -364,6 +278,7 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 				}		/* if (param_set_p) */
 
+			SetServiceJobStatus (job_p, status);
 			LogServiceJob (job_p);
 		}		/* if (service_p -> se_jobs_p) */
 
@@ -641,6 +556,256 @@ static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p)
 	return success_flag;
 }
 
+
+static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const char *name_s, const json_t *data_json_p, ParentalGenotypeServiceData *data_p)
+{
+	bson_oid_t *id_p = NULL;
+	bool success_flag = false;
+	json_t *doc_p = json_object ();
+
+	if (doc_p)
+		{
+			id_p = GetNewBSONOid ();
+
+			if (id_p)
+				{
+					if (AddCompoundIdToJSON (doc_p, id_p))
+						{
+							if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s))
+								{
+									/*
+										The organisation is:
+										1 row = marker name
+										2 row = chromosome / linkage group name
+										3 row = genetic mapping position
+										4 row = Parent A (always Paragon for this set)
+										5 row = Parent B (always a Watkins landrace accession in format "Watkins 1190[0-9][0-9][0-9]"
+										6 to last row = individuals of that population, progenies from the cross of Parent A with Parent B
+
+										We abbreviate the population names from correctly: "Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]".
+										The code 1190xxx was the original number these lines were stored in the germplasm resource unit.
+									 */
+									if (json_is_array (data_json_p))
+										{
+											const size_t num_rows = json_array_size (data_json_p);
+
+											/*
+											 * There are 2 header rows, so the actual genotype data doesn't
+											 * start until row 3
+											 */
+											if (num_rows >= 3)
+												{
+													/*
+													 * Since the first row, the marker names, is used as the headers, the first entry should be
+													 * the chromosome / linkage group name
+													 */
+													size_t row_index = 0;
+													json_t *row_p = json_array_get (data_json_p, row_index);
+
+													if (AddChromosomes (doc_p, row_p))
+														{
+															/*
+															 * genetic mapping position
+															 */
+															row_p = json_array_get (data_json_p, ++ row_index);
+
+															if (AddGeneticMappingPositions (doc_p, row_p))
+																{
+																	row_p = json_array_get (data_json_p, ++ row_index);
+																	const char *parent_a_s = AddParentRow (doc_p, row_p, PGS_PARENT_A_S);
+
+																	if (parent_a_s)
+																		{
+																			row_p = json_array_get (data_json_p, ++ row_index);
+																			const char *parent_b_s = AddParentRow (doc_p, row_p, PGS_PARENT_B_S);
+
+																			if (parent_b_s)
+																				{
+																					success_flag = true;
+
+																					++ row_index;
+
+																					while ((row_index < num_rows) && success_flag)
+																						{
+																							row_p = json_array_get (data_json_p, row_index);
+
+																							if (AddGenotypesRow (doc_p, row_p))
+																								{
+																									++ row_index;
+																								}
+																							else
+																								{
+																									success_flag = false;
+																								}
+
+																						}		/* while ((row_index < num_rows) && success_flag) */
+
+																					if (success_flag)
+																						{
+																							/*
+																							 * Save the document
+																							 */
+																							if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, data_p -> pgsd_markers_collection_s, NULL))
+																								{
+																									*parent_a_ss = parent_a_s;
+																									*parent_b_ss = parent_b_s;
+																								}
+																							else
+																								{
+																									success_flag = false;
+																									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_markers_collection_s);
+																								}
+																						}
+
+
+																				}		/* if (parent_b_s) */
+
+																		}		/* if (parent_a_s) */
+
+																}		/* if (AddGeneticMappingPositions (doc_p, row_p)) */
+
+														}		/* if (AddChromosomes (doc_p, chromosomes_p)) */
+
+												}		/* if (num_rows >= 3) */
+
+										}		/* if (json_is_array (data_json_p)) */
+
+								}		/* if (SetJSONString (doc_p, CONTEXT_PREFIX_SCHEMA_ORG_S "name", name_s)) */
+
+						}		/* if (AddCompoundIdToJSON (doc_p, id_p)) */
+					else
+						{
+							FreeBSONOid (id_p);
+						}
+
+				}		/* if (id_p) */
+
+
+			json_decref (doc_p);
+		}		/* if (doc_p) */
+
+
+	return success_flag ? id_p : NULL;
+}
+
+
+static bool SaveAccessions (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p)
+{
+	bool success_flag = false;
+	MongoTool *tool_p = data_p -> pgsd_mongo_p;
+
+	if (SetMongoToolCollection (tool_p, data_p -> pgsd_accessions_collection_s))
+		{
+			if (SaveAccession (parent_a_s, id_p, tool_p))
+				{
+					if (SaveAccession (parent_b_s, id_p, tool_p))
+						{
+							success_flag = true;
+						}
+
+				}
+
+		}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
+	return success_flag;
+}
+
+
+static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p)
+{
+	bool success_flag = false;
+	bson_t *query_p = bson_new ();
+
+	if (query_p)
+		{
+			if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, parent_s))
+				{
+					bool done_flag = false;
+
+					/*
+					 * Is the accession already in the collection
+					 */
+					json_t *results_p = GetAllMongoResultsAsJSON (mongo_p, query_p, NULL);
+
+					if (results_p)
+						{
+							if (json_is_array (results_p))
+								{
+									const size_t num_results = json_array_size (results_p);
+
+									if (num_results == 1)
+										{
+											json_t *accession_data_p = json_array_get (results_p, 0);
+											json_t *marker_ids_p = json_object_get (accession_data_p, PGS_MARKER_IDS_S);
+
+											if (marker_ids_p)
+												{
+													done_flag = true;
+
+													if (json_is_array (marker_ids_p))
+														{
+															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
+																{
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, query_p))
+																		{
+																			success_flag = true;
+																		}
+																}
+														}
+												}
+										}
+								}
+
+							json_decref (results_p);
+						}		/* if (results_p) */
+
+
+					/*
+					 * Do we need to do an insert?
+					 */
+					if (! (success_flag && done_flag))
+						{
+							json_t *accession_data_p = json_object ();
+
+							if (accession_data_p)
+								{
+									if (SetJSONString (accession_data_p, PGS_POPULATION_NAME_S, parent_s))
+										{
+											json_t *marker_ids_p = json_array ();
+
+											if (marker_ids_p)
+												{
+													if (json_object_set_new (accession_data_p, PGS_MARKER_IDS_S, marker_ids_p) == 0)
+														{
+															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
+																{
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL))
+																		{
+																			success_flag = true;
+																		}
+																}
+														}		/* if (json_object_set_new (accession_data_p, PGS_MARKER_IDS_S, marker_ids_p) == 0) */
+													else
+														{
+															json_decref (marker_ids_p);
+														}
+
+												}		/* if (marker_ids_p) */
+
+										}		/* if (SetJSONString (accession_data_p, PGS_POPULATION_NAME_S, parent_s)) */
+
+								}		/* if (accession_data_p) */
+
+						}		/* if (! (success_flag && done_flag)) */
+
+				}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, parent_s)) */
+
+
+			bson_destroy (query_p);
+		}
+
+	return success_flag;
+}
 
 
 static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service * UNUSED_PARAM (service_p), Resource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
