@@ -11,6 +11,7 @@
 
 #include "parental_genotype_service_library.h"
 #include "service.h"
+#include "schema_keys.h"
 
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -37,6 +38,7 @@ PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_PARENT_A_S PARENTAL_GENOTYPE_SE
 
 PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_PARENT_B_S PARENTAL_GENOTYPE_SERVICE_VAL ("parent_b");
 
+PARENTAL_GENOTYPE_SERVICE_PREFIX const char *PGS_POPULATION_NAME_S PARENTAL_GENOTYPE_SERVICE_CONCAT_VAL (CONTEXT_PREFIX_SCHEMA_ORG_S, "name");
 
 #ifdef __cplusplus
 extern "C"

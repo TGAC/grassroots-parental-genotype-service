@@ -21,6 +21,7 @@
  */
 
 #include "search_service.h"
+#include "parental_genotype_service.h"
 
 
 #include "audit.h"
@@ -32,6 +33,9 @@
  * Static declarations
  */
 
+static NamedParameterType S_MARKER = { "Marker", PT_KEYWORD };
+static NamedParameterType S_POPULATION = { "Population", PT_KEYWORD };
+static NamedParameterType S_FULL_RECORD = { "Return entire populations", PT_BOOLEAN };
 
 
 static const char *GetParentalGenotypeSearchServiceName (Service *service_p);
@@ -51,6 +55,11 @@ static ParameterSet *IsResourceForParentalGenotypeSearchService (Service *servic
 static bool CloseParentalGenotypeSearchService (Service *service_p);
 
 static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service *service_p);
+
+static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, const bool full_record_flag, ParentalGenotypeServiceData *data_p);
+
+static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s);
+
 
 /*
  * API definitions
@@ -82,7 +91,6 @@ Service *GetParentalGenotypeSearchService (void)
 														 (ServiceData *) data_p,
 														 GetParentalGenotypeSearchServiceMetadata))
 						{
-
 							if (ConfigureParentalGenotypeService (data_p))
 								{
 									return service_p;
@@ -121,15 +129,46 @@ static const char *GetParentalGenotypeSearchServiceInformationUri (Service * UNU
 
 static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, Resource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
 {
-	ParameterSet *params_p = AllocateParameterSet ("ParentalGenotype search service parameters", "The parameters used for the ParentalGenotype search service");
+	ParameterSet *param_set_p = AllocateParameterSet ("ParentalGenotype search service parameters", "The parameters used for the ParentalGenotype search service");
 
-	if (params_p)
+	if (param_set_p)
 		{
 			ServiceData *data_p = service_p -> se_data_p;
+			Parameter *param_p = NULL;
+			SharedType def;
+			ParameterGroup *group_p = NULL;
+
+			InitSharedType (&def);
+
+			def.st_string_value_s = NULL;
+
+			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_MARKER.npt_type, S_MARKER.npt_name_s, "Marker", "The name of the marker to search for", def, PL_BASIC)) != NULL)
+				{
+					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", def, PL_BASIC)) != NULL)
+						{
+							def.st_boolean_value = false;
+
+							if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_type, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", def, PL_BASIC)) != NULL)
+								{
+									return param_set_p;
+								}
+							else
+								{
+									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_FULL_RECORD.npt_name_s);
+								}
+						}
+					else
+						{
+							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_POPULATION.npt_name_s);
+						}
+				}
+			else
+				{
+					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_MARKER.npt_name_s);
+				}
 
 
-
-			FreeParameterSet (params_p);
+			FreeParameterSet (param_set_p);
 		}
 	else
 		{
@@ -172,6 +211,27 @@ static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, Para
 
 			if (param_set_p)
 				{
+					SharedType marker_value;
+					InitSharedType (&marker_value);
+
+					if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &marker_value, true))
+						{
+							SharedType population_value;
+							InitSharedType (&population_value);
+
+							if (GetParameterValueFromParameterSet (param_set_p, S_POPULATION.npt_name_s, &population_value, true))
+								{
+									SharedType full_records_value;
+									InitSharedType (&full_records_value);
+
+									full_records_value.st_boolean_value = false;
+									GetParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_value, true);
+
+									DoSearch (job_p, marker_value.st_string_value_s, population_value.st_string_value_s, full_records_value.st_boolean_value, data_p);
+
+								}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &population_value, true)) */
+
+						}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &marker_value, true)) */
 
 				}		/* if (param_set_p) */
 
@@ -365,4 +425,152 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 static ParameterSet *IsResourceForParentalGenotypeSearchService (Service * UNUSED_PARAM (service_p), Resource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
 {
 	return NULL;
+}
+
+
+static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, const bool full_record_flag, ParentalGenotypeServiceData *data_p)
+{
+	OperationStatus status = OS_FAILED_TO_START;
+	bson_t *query_p = bson_new ();
+
+	if (query_p)
+		{
+			bool success_flag = true;
+
+			if (marker_s)
+				{
+					bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
+
+					if (child_p)
+						{
+							if (!BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
+								{
+									success_flag = false;
+									bson_destroy (child_p);
+								}
+						}
+					else
+						{
+							success_flag = false;
+						}
+				}
+
+			if (success_flag)
+				{
+					json_t *results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
+
+					if (results_p)
+						{
+							if (json_is_array (results_p))
+								{
+									size_t i = 0;
+									size_t num_added = 0;
+									const size_t num_results = json_array_size (results_p);
+
+									for (i = 0; i < num_results; ++ i)
+										{
+											json_t *entry_p = json_array_get (results_p, i);
+											const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
+											json_t *dest_record_p = NULL;
+
+											if (full_record_flag)
+												{
+													dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
+												}
+											else
+												{
+													json_t *doc_p = json_object ();
+
+													if (doc_p)
+														{
+															if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S))
+																{
+																	if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S))
+																		{
+																			json_t *marker_p = json_object_get (entry_p, marker_s);
+
+																			if (marker_p)
+																				{
+																					if (json_object_set (doc_p, marker_s, marker_p) == 0)
+																						{
+																							dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
+																						}
+																				}
+
+																		}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S)) */
+																	else
+																		{
+																			PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_B_S);
+																		}
+
+																}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S)) */
+															else
+																{
+																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_A_S);
+																}
+
+															json_decref (doc_p);
+														}		/* if (doc_p) */
+
+												}
+
+											if (dest_record_p)
+												{
+													if (AddResultToServiceJob (job_p, dest_record_p))
+														{
+															++ num_added;
+														}
+													else
+														{
+															json_decref (dest_record_p);
+														}
+
+												}		/* if (dest_record_p) */
+
+											if (population_s)
+												{
+
+												}
+										}
+
+									if (num_added == num_results)
+										{
+											status = OS_SUCCEEDED;
+										}
+									else if (num_added > 0)
+										{
+											status = OS_PARTIALLY_SUCCEEDED;
+										}
+									else
+										{
+											status = OS_FAILED;
+										}
+
+								}		/* if (json_is_array (results_p)) */
+
+							json_decref (results_p);
+						}
+				}
+
+			bson_destroy (query_p);
+		}		/* if (query_p) */
+
+	SetServiceJobStatus (job_p, status);
+}
+
+
+static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s)
+{
+	bool success_flag = false;
+	const char *value_s = GetJSONString (src_p, key_s);
+
+	if (value_s)
+		{
+			if (SetJSONString (dest_p, key_s, value_s))
+				{
+					success_flag = true;
+				}
+		}
+
+	return success_flag;
 }

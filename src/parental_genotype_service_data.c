@@ -71,18 +71,18 @@ bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p)
 
 	if (data_p -> pgsd_database_s)
 		{
-			if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s))
-				{
-					data_p -> pgsd_collection_s = GetJSONString (service_config_p, "collection");
+			data_p -> pgsd_collection_s = GetJSONString (service_config_p, "collection");
 
-					if (data_p -> pgsd_collection_s)
+			if (data_p -> pgsd_collection_s)
+				{
+					if (SetMongoToolDatabaseAndCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s, data_p -> pgsd_collection_s))
 						{
 							success_flag = true;
-						} 	/* if (data_p -> pgsd_collection_s) */
+						} 	/* if (SetMongoToolDatabaseAndCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s, data_p -> pgsd_collection_s)) */
 
-				}		/* if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s)) */
+				}		/* if (data_p -> pgsd_collection_s) */
 
-		} /* if (data_p -> psd_database_s) */
+		}		/* if (data_p -> psd_database_s) */
 
 	return success_flag;
 }

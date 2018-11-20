@@ -146,7 +146,7 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 			ServiceData *data_p = service_p -> se_data_p;
 			Parameter *param_p = NULL;
 			SharedType def;
-			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Field Trials", NULL, false, data_p, param_set_p);
+			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Parental Cross Data", NULL, false, data_p, param_set_p);
 
 			InitSharedType (&def);
 
@@ -252,7 +252,7 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 													if (doc_p)
 														{
-															if (SetJSONString (doc_p, CONTEXT_PREFIX_SCHEMA_ORG_S "name", name_s))
+															if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s))
 																{
 																	/*
 																		The organisation is:
@@ -326,7 +326,7 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 																															/*
 																															 * Save the document
 																															 */
-																															if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, data_p -> pgsd_collection_s, NULL))
+																															if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, NULL, NULL))
 																																{
 																																	SetServiceJobStatus (job_p, OS_SUCCEEDED);
 																																}
@@ -403,102 +403,16 @@ static ServiceMetadata *GetParentalGenotypeSubmissionServiceMetadata (Service *s
 									if (AddSchemaTermToServiceMetadataInput (metadata_p, input_p))
 										{
 											SchemaTerm *output_p;
-
-											/* Place */
-											term_url_s = CONTEXT_PREFIX_SCHEMA_ORG_S "Place";
-											output_p = AllocateSchemaTerm (term_url_s, "Place", "Entities that have a somewhat fixed, physical extension.");
+											/* Genotype */
+											term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000513";
+											output_p = AllocateSchemaTerm (term_url_s, "genotype", "Information, making the distinction between the actual physical material "
+																										 "(e.g. a cell) and the information about the genetic content (genotype).");
 
 											if (output_p)
 												{
 													if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
 														{
-															/* Date */
-															term_url_s = CONTEXT_PREFIX_SCHEMA_ORG_S "Date";
-															output_p = AllocateSchemaTerm (term_url_s, "Date", "A date value in ISO 8601 date format.");
-
-															if (output_p)
-																{
-																	if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																		{
-																			/* Pathogen */
-																			term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000643";
-																			output_p = AllocateSchemaTerm (term_url_s, "pathogen", "A biological agent that causes disease or illness to its host.");
-
-																			if (output_p)
-																				{
-																					if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																						{
-																							/* Phenotype */
-																							term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000651";
-																							output_p = AllocateSchemaTerm (term_url_s, "phenotype", "The observable form taken by some character (or group of characters) "
-																																						 "in an individual or an organism, excluding pathology and disease. The detectable outward manifestations of a specific genotype.");
-
-																							if (output_p)
-																								{
-																									if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																										{
-																											/* Genotype */
-																											term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000513";
-																											output_p = AllocateSchemaTerm (term_url_s, "genotype", "Information, making the distinction between the actual physical material "
-																																										 "(e.g. a cell) and the information about the genetic content (genotype).");
-
-																											if (output_p)
-																												{
-																													if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																														{
-																															return metadata_p;
-																														}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																													else
-																														{
-																															PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																															FreeSchemaTerm (output_p);
-																														}
-
-																												}		/* if (output_p) */
-																											else
-																												{
-																													PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																												}
-																										}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																									else
-																										{
-																											PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																											FreeSchemaTerm (output_p);
-																										}
-
-																								}		/* if (output_p) */
-																							else
-																								{
-																									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																								}
-
-																						}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																					else
-																						{
-																							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																							FreeSchemaTerm (output_p);
-																						}
-
-																				}		/* if (output_p) */
-																			else
-																				{
-																					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																				}
-
-																		}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																	else
-																		{
-																			PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																			FreeSchemaTerm (output_p);
-																		}
-
-																}		/* if (output_p) */
-															else
-																{
-																	PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																}
-
-
+															return metadata_p;
 														}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
 													else
 														{
