@@ -1,18 +1,18 @@
 /*
-** Copyright 2014-2018 The Earlham Institute
-**
-** Licensed under the Apache License, Version 2.0 (the "License");
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an "AS IS" BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-*/
+ ** Copyright 2014-2018 The Earlham Institute
+ **
+ ** Licensed under the Apache License, Version 2.0 (the "License");
+ ** you may not use this file except in compliance with the License.
+ ** You may obtain a copy of the License at
+ **
+ **     http://www.apache.org/licenses/LICENSE-2.0
+ **
+ ** Unless required by applicable law or agreed to in writing, software
+ ** distributed under the License is distributed on an "AS IS" BASIS,
+ ** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ ** See the License for the specific language governing permissions and
+ ** limitations under the License.
+ */
 /*
  * search_service.c
  *
@@ -56,7 +56,7 @@ static bool CloseParentalGenotypeSearchService (Service *service_p);
 
 static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service *service_p);
 
-static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, const bool full_record_flag, ParentalGenotypeServiceData *data_p);
+static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, bool full_record_flag, ParentalGenotypeServiceData *data_p);
 
 static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s);
 
@@ -77,19 +77,19 @@ Service *GetParentalGenotypeSearchService (void)
 			if (data_p)
 				{
 					if (InitialiseService (service_p,
-														 GetParentalGenotypeSearchServiceName,
-														 GetParentalGenotypeSearchServiceDesciption,
-														 GetParentalGenotypeSearchServiceInformationUri,
-														 RunParentalGenotypeSearchService,
-														 IsResourceForParentalGenotypeSearchService,
-														 GetParentalGenotypeSearchServiceParameters,
-														 ReleaseParentalGenotypeSearchServiceParameters,
-														 CloseParentalGenotypeSearchService,
-														 NULL,
-														 false,
-														 SY_SYNCHRONOUS,
-														 (ServiceData *) data_p,
-														 GetParentalGenotypeSearchServiceMetadata))
+																 GetParentalGenotypeSearchServiceName,
+																 GetParentalGenotypeSearchServiceDesciption,
+																 GetParentalGenotypeSearchServiceInformationUri,
+																 RunParentalGenotypeSearchService,
+																 IsResourceForParentalGenotypeSearchService,
+																 GetParentalGenotypeSearchServiceParameters,
+																 ReleaseParentalGenotypeSearchServiceParameters,
+																 CloseParentalGenotypeSearchService,
+																 NULL,
+																 false,
+																 SY_SYNCHRONOUS,
+																 (ServiceData *) data_p,
+																 GetParentalGenotypeSearchServiceMetadata))
 						{
 							if (ConfigureParentalGenotypeService (data_p))
 								{
@@ -250,9 +250,9 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 {
 	const char *term_url_s = CONTEXT_PREFIX_EDAM_ONTOLOGY_S "topic_0625";
 	SchemaTerm *category_p = AllocateSchemaTerm (term_url_s, "Genotype and phenotype",
-		"The study of genetic constitution of a living entity, such as an individual, and organism, a cell and so on, "
-		"typically with respect to a particular observable phenotypic traits, or resources concerning such traits, which "
-		"might be an aspect of biochemistry, physiology, morphology, anatomy, development and so on.");
+																							 "The study of genetic constitution of a living entity, such as an individual, and organism, a cell and so on, "
+																							 "typically with respect to a particular observable phenotypic traits, or resources concerning such traits, which "
+																							 "might be an aspect of biochemistry, physiology, morphology, anatomy, development and so on.");
 
 	if (category_p)
 		{
@@ -271,7 +271,7 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 
 							term_url_s = CONTEXT_PREFIX_EDAM_ONTOLOGY_S "data_0968";
 							input_p = AllocateSchemaTerm (term_url_s, "Keyword",
-								"Boolean operators (AND, OR and NOT) and wildcard characters may be allowed. Keyword(s) or phrase(s) used (typically) for text-searching purposes.");
+																						"Boolean operators (AND, OR and NOT) and wildcard characters may be allowed. Keyword(s) or phrase(s) used (typically) for text-searching purposes.");
 
 							if (input_p)
 								{
@@ -306,7 +306,7 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 																							/* Phenotype */
 																							term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000651";
 																							output_p = AllocateSchemaTerm (term_url_s, "phenotype", "The observable form taken by some character (or group of characters) "
-																								"in an individual or an organism, excluding pathology and disease. The detectable outward manifestations of a specific genotype.");
+																																						 "in an individual or an organism, excluding pathology and disease. The detectable outward manifestations of a specific genotype.");
 
 																							if (output_p)
 																								{
@@ -315,7 +315,7 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 																											/* Genotype */
 																											term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000513";
 																											output_p = AllocateSchemaTerm (term_url_s, "genotype", "Information, making the distinction between the actual physical material "
-																												"(e.g. a cell) and the information about the genetic content (genotype).");
+																																										 "(e.g. a cell) and the information about the genetic content (genotype).");
 
 																											if (output_p)
 																												{
@@ -428,7 +428,7 @@ static ParameterSet *IsResourceForParentalGenotypeSearchService (Service * UNUSE
 }
 
 
-static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, const bool full_record_flag, ParentalGenotypeServiceData *data_p)
+static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, bool full_record_flag, ParentalGenotypeServiceData *data_p)
 {
 	OperationStatus status = OS_FAILED_TO_START;
 	bson_t *query_p = bson_new ();
@@ -436,121 +436,267 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 	if (query_p)
 		{
 			bool success_flag = true;
+			json_t *results_p = NULL;
 
-			if (marker_s)
+			if (!IsStringEmpty (marker_s))
 				{
-					bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
-
-					if (child_p)
+					if (!IsStringEmpty (population_s))
 						{
-							if (!BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
-								{
-									success_flag = false;
-									bson_destroy (child_p);
-								}
-						}
+
+						}		/* if (IsStringEmpty (population_s)) */
 					else
 						{
-							success_flag = false;
-						}
-				}
-
-			if (success_flag)
-				{
-					json_t *results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
-
-					if (results_p)
-						{
-							if (json_is_array (results_p))
+							if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
 								{
-									size_t i = 0;
-									size_t num_added = 0;
-									const size_t num_results = json_array_size (results_p);
-
-									for (i = 0; i < num_results; ++ i)
+									if (!IsStringEmpty (marker_s))
 										{
-											json_t *entry_p = json_array_get (results_p, i);
-											const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
-											json_t *dest_record_p = NULL;
+											bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
 
-											if (full_record_flag)
+											if (child_p)
 												{
-													dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
-												}
-											else
-												{
-													json_t *doc_p = json_object ();
-
-													if (doc_p)
+													if (BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
 														{
-															if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S))
-																{
-																	if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S))
-																		{
-																			json_t *marker_p = json_object_get (entry_p, marker_s);
-
-																			if (marker_p)
-																				{
-																					if (json_object_set (doc_p, marker_s, marker_p) == 0)
-																						{
-																							dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
-																						}
-																				}
-
-																		}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S)) */
-																	else
-																		{
-																			PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_B_S);
-																		}
-
-																}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S)) */
-															else
-																{
-																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_A_S);
-																}
-
-															json_decref (doc_p);
-														}		/* if (doc_p) */
-
-												}
-
-											if (dest_record_p)
-												{
-													if (AddResultToServiceJob (job_p, dest_record_p))
-														{
-															++ num_added;
+															results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
 														}
 													else
 														{
-															json_decref (dest_record_p);
+															bson_destroy (child_p);
 														}
-
-												}		/* if (dest_record_p) */
-
-											if (population_s)
-												{
-
 												}
-										}
+											else
+												{
+													success_flag = false;
+												}
+										}		/* if (!IsStringEmpty (marker_s)) */
 
-									if (num_added == num_results)
+								}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+						}
+
+				}		/* if (IsStringEmpty (marker_s)) */
+			else
+				{
+					if (!IsStringEmpty (population_s))
+						{
+							if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s))
+								{
+									if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_varieties_collection_s))
 										{
-											status = OS_SUCCEEDED;
-										}
-									else if (num_added > 0)
+											if ((results_p = json_array ()) != NULL)
+												{
+													json_t *population_id_results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
+
+													if (population_id_results_p)
+														{
+															const size_t num_results = json_array_size (population_id_results_p);
+															size_t i = 0;
+
+															while ((i < num_results) && success_flag)
+																{
+																	const json_t *entry_p = json_array_get (population_id_results_p, i);
+																	const json_t *population_ids_p = json_object_get (entry_p, PGS_VARIETY_IDS_S);
+
+																	if (population_ids_p)
+																		{
+																			if (json_is_array (population_ids_p))
+																				{
+																					const size_t num_ids = json_array_size (population_ids_p);
+																					size_t j = 0;
+
+																					if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+																						{
+																							while ((j < num_ids) && success_flag)
+																								{
+																									const json_t *population_id_p = json_array_get (population_ids_p, j);
+																									bson_oid_t population_oid;
+																									bool added_flag = false;
+
+																									if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid))
+																										{
+																											/*
+																											 * Now we have the id we can get the population
+																											 */
+																											bson_t *pop_query_p = bson_new ();
+
+																											if (pop_query_p)
+																												{
+																													if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid))
+																														{
+																															json_t *populations_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, pop_query_p, NULL);
+
+																															if (populations_p)
+																																{
+																																	if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1))
+																																		{
+																																			json_t *population_p = json_array_get (populations_p, 0);
+
+																																			if (json_array_append (results_p, population_p) == 0)
+																																				{
+																																					added_flag = true;
+																																				}
+
+																																		}		/* if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1)) */
+
+																																	json_decref (populations_p);
+																																}		/* if (populations_p) */
+
+																														}		/* if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid)) */
+
+																													bson_destroy (pop_query_p);
+																												}		/* if (pop_query_p) */
+
+																										}		/* if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid)) */
+																									else
+																										{
+																											success_flag = false;
+																										}
+
+																									if (added_flag)
+																										{
+																											++ j;
+																										}
+																									else
+																										{
+																											success_flag = false;
+																										}
+																								}		/* while ((j < num_ids) && success_flag) */
+
+																						}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s)) */
+
+																				}		/* if (json_is_array (population_ids_p)) */
+
+																		}		/* if (population_ids_p) */
+
+																	++ i;
+																}		/* while ((i < num_results) && success_flag) */
+
+															if (success_flag)
+																{
+																	/*
+																	 * Since we've done a search for a population with no marker specified,
+																	 * we need to return all of the markers, i.e. the full record, so
+																	 * we need to make sure that the flag for this is set.
+																	 */
+																	full_record_flag = true;
+																}
+															else
+																{
+																	json_decref (results_p);
+																	results_p = NULL;
+																}
+
+														}		/* if (population_id_results_p) */
+
+												}		/* if ((results_p = json_array ()) != NULL) */
+
+										}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
+								}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s)) */
+							else
+								{
+									PrintBSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, query_p, "Failed to add \"%s\": \"%s\" to query", PGS_POPULATION_NAME_S, population_s);
+								}
+
+						}		/* if (IsStringEmpty (population_s)) */
+					else
+						{
+							/*
+							 * nothing to do!
+							 */
+							status = OS_IDLE;
+						}
+				}
+
+			if (results_p)
+				{
+					if (json_is_array (results_p))
+						{
+							size_t i = 0;
+							size_t num_added = 0;
+							const size_t num_results = json_array_size (results_p);
+
+							for (i = 0; i < num_results; ++ i)
+								{
+									json_t *entry_p = json_array_get (results_p, i);
+									const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
+									json_t *dest_record_p = NULL;
+
+									if (full_record_flag)
 										{
-											status = OS_PARTIALLY_SUCCEEDED;
+											dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
 										}
 									else
 										{
-											status = OS_FAILED;
+											json_t *doc_p = json_object ();
+
+											if (doc_p)
+												{
+													if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S))
+														{
+															if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S))
+																{
+																	json_t *marker_p = json_object_get (entry_p, marker_s);
+
+																	if (marker_p)
+																		{
+																			if (json_object_set (doc_p, marker_s, marker_p) == 0)
+																				{
+																					dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
+																				}
+																		}
+
+																}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S)) */
+															else
+																{
+																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_B_S);
+																}
+
+														}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S)) */
+													else
+														{
+															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_A_S);
+														}
+
+													json_decref (doc_p);
+												}		/* if (doc_p) */
+
 										}
 
-								}		/* if (json_is_array (results_p)) */
+									if (dest_record_p)
+										{
+											if (AddResultToServiceJob (job_p, dest_record_p))
+												{
+													++ num_added;
+												}
+											else
+												{
+													json_decref (dest_record_p);
+												}
 
-							json_decref (results_p);
-						}
-				}
+										}		/* if (dest_record_p) */
+
+									if (population_s)
+										{
+
+										}
+								}
+
+							if (num_added == num_results)
+								{
+									status = OS_SUCCEEDED;
+								}
+							else if (num_added > 0)
+								{
+									status = OS_PARTIALLY_SUCCEEDED;
+								}
+							else
+								{
+									status = OS_FAILED;
+								}
+
+						}		/* if (json_is_array (results_p)) */
+
+					json_decref (results_p);
+				}		/* if (results_p) */
 
 			bson_destroy (query_p);
 		}		/* if (query_p) */

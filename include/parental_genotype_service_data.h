@@ -66,16 +66,19 @@ typedef struct /*PARENTAL_GENOTYPE_SERVICE_LOCAL*/ ParentalGenotypeServiceData
 	/**
 	 * @private
 	 *
-	 * The collection name of use.
+	 * The collection name of the population parentl-cross data use.
 	 */
-	const char *pgsd_markers_collection_s;
+	const char *pgsd_populations_collection_s;
 
 	/**
 	 * @private
 	 *
 	 * The collection name of use.
 	 */
-	const char *pgsd_accessions_collection_s;
+	const char *pgsd_varieties_collection_s;
+
+
+	json_t *pgsd_name_mappings_p;
 
 } ParentalGenotypeServiceData;
 

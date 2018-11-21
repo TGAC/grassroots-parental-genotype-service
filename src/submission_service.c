@@ -37,7 +37,6 @@
 
 static const char * const S_ID_S = "id";
 
-static NamedParameterType S_SET_NAME = { "Name", PT_STRING };
 static NamedParameterType S_SET_DATA = { "Data", PT_TABLE };
 
 
@@ -67,13 +66,15 @@ static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p);
 
 static const char *AddParentRow (json_t *doc_p, json_t *genotypes_p, const char *key_s);
 
-static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p);
+static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p, ParentalGenotypeServiceData *data_p);
 
-static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const char *name_s, const json_t *data_json_p, ParentalGenotypeServiceData *data_p);
+static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const json_t *data_json_p, ParentalGenotypeServiceData *data_p);
 
-static bool SaveAccessions (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p);
+static bool SaveVarieties (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p);
 
-static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p);
+static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p);
+
+static char *GetAccession (const json_t *genotypes_p, ParentalGenotypeServiceData *data_p);
 
 
 /*
@@ -158,23 +159,16 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 
 			def.st_string_value_s = NULL;
 
-			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_NAME.npt_type, S_SET_NAME.npt_name_s, "Name", "The name of the date set", def, PL_BASIC)) != NULL)
+			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", def, PL_BASIC)) != NULL)
 				{
-					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", def, PL_BASIC)) != NULL)
+					if (AddParameterKeyValuePair (param_p, PA_TABLE_COLUMN_HEADERS_PLACEMENT_S, PA_TABLE_COLUMN_HEADERS_PLACEMENT_FIRST_ROW_S))
 						{
-							if (AddParameterKeyValuePair (param_p, PA_TABLE_COLUMN_HEADERS_PLACEMENT_S, PA_TABLE_COLUMN_HEADERS_PLACEMENT_FIRST_ROW_S))
-								{
-									return param_set_p;
-								}
-						}
-					else
-						{
-							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_SET_DATA.npt_name_s);
+							return param_set_p;
 						}
 				}
 			else
 				{
-					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_SET_NAME.npt_name_s);
+					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_SET_DATA.npt_name_s);
 				}
 
 			FreeParameterSet (param_set_p);
@@ -222,59 +216,51 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 			if (param_set_p)
 				{
-					SharedType name_value;
-					InitSharedType (&name_value);
+					SharedType data_value;
+					InitSharedType (&data_value);
 
-					if (GetParameterValueFromParameterSet (param_set_p, S_SET_NAME.npt_name_s, &name_value, true))
+					if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true))
 						{
-							const char *name_s = NULL;
-							SharedType data_value;
-							InitSharedType (&data_value);
+							const char *data_s = data_value.st_string_value_s;
 
-							name_s = name_value.st_string_value_s;
-
-							if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true))
+							/*
+							 * Has a spreadsheet been uploaded?
+							 */
+							if (! (IsStringEmpty (data_s)))
 								{
-									const char *data_s = data_value.st_string_value_s;
+									json_error_t e;
+									json_t *data_json_p = NULL;
 
 									/*
-									 * Has a spreadsheet been uploaded?
+									 * The data could be either an array of json objects
+									 * or a tabular string. so try it as json array first
 									 */
-									if (! (IsStringEmpty (data_s)))
+									data_json_p = json_loads (data_s, 0, &e);
+
+									status = OS_FAILED;
+
+									if (data_json_p)
 										{
-											json_error_t e;
-											json_t *data_json_p = NULL;
+											const char *parent_a_s = NULL;
+											const char *parent_b_s = NULL;
+											bson_oid_t *id_p = SaveMarkers (&parent_a_s, &parent_b_s, data_json_p, data_p);
 
-											/*
-											 * The data could be either an array of json objects
-											 * or a tabular string. so try it as json array first
-											 */
-											data_json_p = json_loads (data_s, 0, &e);
-
-											status = OS_FAILED;
-
-											if (data_json_p)
+											if (id_p)
 												{
-													const char *parent_a_s = NULL;
-													const char *parent_b_s = NULL;
-													bson_oid_t *id_p = SaveMarkers (&parent_a_s, &parent_b_s, name_s, data_json_p, data_p);
-
-													if (id_p)
+													if (SaveVarieties (parent_a_s, parent_b_s, id_p, data_p))
 														{
-															if (SaveAccessions (parent_a_s, parent_b_s, id_p, data_p))
-																{
-																	status = OS_SUCCEEDED;
-																}
-														}		/* if (id_p) */
+															status = OS_SUCCEEDED;
+														}
+												}		/* if (id_p) */
 
-													json_decref (data_json_p);
-												}		/* if (data_json_p) */
+											json_decref (data_json_p);
+										}		/* if (data_json_p) */
 
-										}		/* if (! (IsStringEmpty (data_s))) */
+								}		/* if (! (IsStringEmpty (data_s))) */
 
-								}		/* if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true)) */
+						}		/* if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true)) */
 
-						}		/* if (GetParameterValueFromParameterSet (param_set_p, S_SET_NAME.npt_name_s, &name_value, true)) */
+
 
 				}		/* if (param_set_p) */
 
@@ -494,10 +480,83 @@ static const char *AddParentRow (json_t *doc_p, json_t *genotypes_p, const char 
 }
 
 
-static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p)
+/*
+ * Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]"
+ */
+static char *GetAccession (const json_t *genotypes_p, ParentalGenotypeServiceData *data_p)
+{
+	char *parents_s = NULL;
+	const char *accession_s = GetJSONString (genotypes_p, S_ID_S);
+
+	if (accession_s)
+		{
+			bool success_flag = true;
+
+			if (data_p -> pgsd_name_mappings_p)
+				{
+					void *iterator_p = json_object_iter (data_p -> pgsd_name_mappings_p);
+
+					while (iterator_p && success_flag)
+						{
+							const char *key_s = json_object_iter_key (iterator_p);
+					    const size_t key_length = strlen (key_s);
+
+							if (strncmp (accession_s, key_s, key_length) == 0)
+								{
+									json_t *value_p = json_object_iter_value (iterator_p);
+
+									if (json_is_string (value_p))
+										{
+											const char *value_s = json_string_value (value_p);
+
+											accession_s += key_length;
+											parents_s = ConcatenateStrings (value_s, accession_s);
+
+											if (!parents_s)
+												{
+													success_flag = false;
+													PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to concatenate \"%s\" and \"%s\"", value_s, accession_s);
+												}		/* if (!parents_s) */
+
+										}		/* if (json_is_string (value_p)) */
+									else
+										{
+											success_flag  = false;
+											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, data_p -> pgsd_name_mappings_p, "Value for \"%s\" is not a string", key_s);
+										}
+
+								}		/* if (strncmp (accession_s, key_s, key_length) == 0) */
+
+							if (success_flag)
+								{
+									iterator_p = json_object_iter_next (data_p -> pgsd_name_mappings_p, iterator_p);
+								}
+
+						}		/* while (iterator_p && success_flag) */
+
+				}		/* if (data_p -> pgsd_name_mappings_p) */
+
+			if (success_flag && (parents_s == NULL))
+				{
+					parents_s = EasyCopyToNewString (accession_s);
+
+					if (!parents_s)
+						{
+							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to copy \"%s\"", accession_s);
+						}		/* if (!parents_s) */
+
+				}
+
+		}		/* if (accession_s) */
+
+	return parents_s;
+}
+
+
+static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p, ParentalGenotypeServiceData *data_p)
 {
 	bool success_flag = true;
-	const char *accession_s = GetJSONString (genotypes_p, S_ID_S);
+	char *accession_s = GetAccession (genotypes_p, data_p);
 
 	if (accession_s)
 		{
@@ -545,6 +604,7 @@ static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p)
 					iter_p = json_object_iter_next (genotypes_p, iter_p);
 				}
 
+			FreeCopiedString (accession_s);
 		}		/* if (accession_s) */
 	else
 		{
@@ -557,7 +617,7 @@ static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p)
 }
 
 
-static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const char *name_s, const json_t *data_json_p, ParentalGenotypeServiceData *data_p)
+static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_ss, const json_t *data_json_p, ParentalGenotypeServiceData *data_p)
 {
 	bson_oid_t *id_p = NULL;
 	bool success_flag = false;
@@ -571,106 +631,115 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 				{
 					if (AddCompoundIdToJSON (doc_p, id_p))
 						{
-							if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s))
+							/*
+								The organisation is:
+								1 row = marker name
+								2 row = chromosome / linkage group name
+								3 row = genetic mapping position
+								4 row = Parent A (always Paragon for this set)
+								5 row = Parent B (always a Watkins landrace accession in format "Watkins 1190[0-9][0-9][0-9]"
+								6 to last row = individuals of that population, progenies from the cross of Parent A with Parent B
+
+								We abbreviate the population names from correctly: "Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]".
+								The code 1190xxx was the original number these lines were stored in the germplasm resource unit.
+							 */
+							if (json_is_array (data_json_p))
 								{
+									const size_t num_rows = json_array_size (data_json_p);
+
 									/*
-										The organisation is:
-										1 row = marker name
-										2 row = chromosome / linkage group name
-										3 row = genetic mapping position
-										4 row = Parent A (always Paragon for this set)
-										5 row = Parent B (always a Watkins landrace accession in format "Watkins 1190[0-9][0-9][0-9]"
-										6 to last row = individuals of that population, progenies from the cross of Parent A with Parent B
-
-										We abbreviate the population names from correctly: "Paragon x Watkins 1190[0-9][0-9][0-9]" to "ParW[0-9][0-9][0-9]".
-										The code 1190xxx was the original number these lines were stored in the germplasm resource unit.
+									 * There are 2 header rows, so the actual genotype data doesn't
+									 * start until row 3
 									 */
-									if (json_is_array (data_json_p))
+									if (num_rows >= 3)
 										{
-											const size_t num_rows = json_array_size (data_json_p);
-
 											/*
-											 * There are 2 header rows, so the actual genotype data doesn't
-											 * start until row 3
+											 * Since the first row, the marker names, is used as the headers, the first entry should be
+											 * the chromosome / linkage group name
 											 */
-											if (num_rows >= 3)
+											size_t row_index = 0;
+											json_t *row_p = json_array_get (data_json_p, row_index);
+
+											if (AddChromosomes (doc_p, row_p))
 												{
 													/*
-													 * Since the first row, the marker names, is used as the headers, the first entry should be
-													 * the chromosome / linkage group name
+													 * genetic mapping position
 													 */
-													size_t row_index = 0;
-													json_t *row_p = json_array_get (data_json_p, row_index);
+													row_p = json_array_get (data_json_p, ++ row_index);
 
-													if (AddChromosomes (doc_p, row_p))
+													if (AddGeneticMappingPositions (doc_p, row_p))
 														{
-															/*
-															 * genetic mapping position
-															 */
 															row_p = json_array_get (data_json_p, ++ row_index);
+															const char *parent_a_s = AddParentRow (doc_p, row_p, PGS_PARENT_A_S);
 
-															if (AddGeneticMappingPositions (doc_p, row_p))
+															if (parent_a_s)
 																{
 																	row_p = json_array_get (data_json_p, ++ row_index);
-																	const char *parent_a_s = AddParentRow (doc_p, row_p, PGS_PARENT_A_S);
+																	const char *parent_b_s = AddParentRow (doc_p, row_p, PGS_PARENT_B_S);
 
-																	if (parent_a_s)
+																	if (parent_b_s)
 																		{
-																			row_p = json_array_get (data_json_p, ++ row_index);
-																			const char *parent_b_s = AddParentRow (doc_p, row_p, PGS_PARENT_B_S);
+																			char *name_s = ConcatenateVarargsStrings (parent_a_s, " x ", parent_b_s, NULL);
 
-																			if (parent_b_s)
+																			if (name_s)
 																				{
-																					success_flag = true;
-
-																					++ row_index;
-
-																					while ((row_index < num_rows) && success_flag)
+																					if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s))
 																						{
-																							row_p = json_array_get (data_json_p, row_index);
+																							success_flag = true;
 
-																							if (AddGenotypesRow (doc_p, row_p))
+																							++ row_index;
+
+																							while ((row_index < num_rows) && success_flag)
 																								{
-																									++ row_index;
-																								}
-																							else
+																									row_p = json_array_get (data_json_p, row_index);
+
+																									if (AddGenotypesRow (doc_p, row_p, data_p))
+																										{
+																											++ row_index;
+																										}
+																									else
+																										{
+																											success_flag = false;
+																										}
+
+																								}		/* while ((row_index < num_rows) && success_flag) */
+
+																							if (success_flag)
 																								{
-																									success_flag = false;
+																									/*
+																									 * Save the document
+																									 */
+																									if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, data_p -> pgsd_populations_collection_s, NULL))
+																										{
+																											*parent_a_ss = parent_a_s;
+																											*parent_b_ss = parent_b_s;
+																										}
+																									else
+																										{
+																											success_flag = false;
+																											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_populations_collection_s);
+																										}
 																								}
 
-																						}		/* while ((row_index < num_rows) && success_flag) */
+																						}		/* if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s)) */
 
-																					if (success_flag)
-																						{
-																							/*
-																							 * Save the document
-																							 */
-																							if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, data_p -> pgsd_markers_collection_s, NULL))
-																								{
-																									*parent_a_ss = parent_a_s;
-																									*parent_b_ss = parent_b_s;
-																								}
-																							else
-																								{
-																									success_flag = false;
-																									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_markers_collection_s);
-																								}
-																						}
+																					FreeCopiedString (name_s);
+																				}		/* if (name_s) */
 
 
-																				}		/* if (parent_b_s) */
+																		}		/* if (parent_b_s) */
 
-																		}		/* if (parent_a_s) */
+																}		/* if (parent_a_s) */
 
-																}		/* if (AddGeneticMappingPositions (doc_p, row_p)) */
+														}		/* if (AddGeneticMappingPositions (doc_p, row_p)) */
 
-														}		/* if (AddChromosomes (doc_p, chromosomes_p)) */
+												}		/* if (AddChromosomes (doc_p, chromosomes_p)) */
 
-												}		/* if (num_rows >= 3) */
+										}		/* if (num_rows >= 3) */
 
-										}		/* if (json_is_array (data_json_p)) */
+								}		/* if (json_is_array (data_json_p)) */
 
-								}		/* if (SetJSONString (doc_p, CONTEXT_PREFIX_SCHEMA_ORG_S "name", name_s)) */
+
 
 						}		/* if (AddCompoundIdToJSON (doc_p, id_p)) */
 					else
@@ -689,16 +758,16 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 }
 
 
-static bool SaveAccessions (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p)
+static bool SaveVarieties (const char *parent_a_s, const char *parent_b_s, const bson_oid_t *id_p, ParentalGenotypeServiceData *data_p)
 {
 	bool success_flag = false;
 	MongoTool *tool_p = data_p -> pgsd_mongo_p;
 
-	if (SetMongoToolCollection (tool_p, data_p -> pgsd_accessions_collection_s))
+	if (SetMongoToolCollection (tool_p, data_p -> pgsd_varieties_collection_s))
 		{
-			if (SaveAccession (parent_a_s, id_p, tool_p))
+			if (SaveVariety (parent_a_s, id_p, tool_p))
 				{
-					if (SaveAccession (parent_b_s, id_p, tool_p))
+					if (SaveVariety (parent_b_s, id_p, tool_p))
 						{
 							success_flag = true;
 						}
@@ -711,7 +780,7 @@ static bool SaveAccessions (const char *parent_a_s, const char *parent_b_s, cons
 }
 
 
-static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p)
+static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool *mongo_p)
 {
 	bool success_flag = false;
 	bson_t *query_p = bson_new ();
@@ -736,7 +805,7 @@ static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTo
 									if (num_results == 1)
 										{
 											json_t *accession_data_p = json_array_get (results_p, 0);
-											json_t *marker_ids_p = json_object_get (accession_data_p, PGS_MARKER_IDS_S);
+											json_t *marker_ids_p = json_object_get (accession_data_p, PGS_VARIETY_IDS_S);
 
 											if (marker_ids_p)
 												{
@@ -775,7 +844,7 @@ static bool SaveAccession (const char *parent_s, const bson_oid_t *id_p, MongoTo
 
 											if (marker_ids_p)
 												{
-													if (json_object_set_new (accession_data_p, PGS_MARKER_IDS_S, marker_ids_p) == 0)
+													if (json_object_set_new (accession_data_p, PGS_VARIETY_IDS_S, marker_ids_p) == 0)
 														{
 															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
 																{
