@@ -251,6 +251,8 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 														{
 															status = OS_SUCCEEDED;
 														}
+
+													FreeBSONOid (id_p);
 												}		/* if (id_p) */
 
 											json_decref (data_json_p);
@@ -377,19 +379,36 @@ static bool AddChromosomes (json_t *doc_p, json_t *chromosomes_p)
 
 					if (value_s)
 						{
-							/* use key and value ... */
+							bool added_flag = false;
 							json_t *marker_p = json_object ();
 
 							if (marker_p)
 								{
-									if (json_object_set_new (doc_p, key_s, marker_p)  == 0)
+									/*
+									 * The marker name may contain full stops and although MongoDB 3.6+
+									 * allows these, the current version of the mongo-c driver (1.13)
+									 * does not, so we need to do the escaping ourselves
+									 */
+									char *escaped_marker_s = NULL;
+
+									if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
 										{
-											if (!SetJSONString (marker_p, PGS_CHROMOSOME_S, value_s))
+											if (json_object_set_new (doc_p, escaped_marker_s ? escaped_marker_s : key_s, marker_p)  == 0)
 												{
-													success_flag = false;
+													if (SetJSONString (marker_p, PGS_CHROMOSOME_S, value_s))
+														{
+															added_flag = true;
+														}
 												}
-										}
-									else
+
+											if (escaped_marker_s)
+												{
+													FreeCopiedString (escaped_marker_s);
+												}
+
+										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+
+									if (!added_flag)
 										{
 											success_flag = false;
 											json_decref (marker_p);
@@ -739,19 +758,21 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 
 								}		/* if (json_is_array (data_json_p)) */
 
-
-
 						}		/* if (AddCompoundIdToJSON (doc_p, id_p)) */
-					else
-						{
-							FreeBSONOid (id_p);
-						}
 
 				}		/* if (id_p) */
 
 
 			json_decref (doc_p);
 		}		/* if (doc_p) */
+
+	if (!success_flag)
+		{
+			if (id_p)
+				{
+					FreeBSONOid (id_p);
+				}
+		}
 
 
 	return success_flag ? id_p : NULL;
@@ -863,6 +884,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 
 										}		/* if (SetJSONString (accession_data_p, PGS_POPULATION_NAME_S, parent_s)) */
 
+									json_decref (accession_data_p);
 								}		/* if (accession_data_p) */
 
 						}		/* if (! (success_flag && done_flag)) */

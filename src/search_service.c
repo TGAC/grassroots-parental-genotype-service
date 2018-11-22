@@ -58,12 +58,13 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service *servi
 
 static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, bool full_record_flag, ParentalGenotypeServiceData *data_p);
 
-static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s);
 
 static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker_s);
 
 
-static bool CopyJSONObject (const json_t *src_p, json_t *dest_p, const char *key_s);
+static bool CopyJSONString (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s);
+
+static bool CopyJSONObject (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s);
 
 
 /*
@@ -284,101 +285,17 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 										{
 											SchemaTerm *output_p;
 
-											/* Place */
-											term_url_s = CONTEXT_PREFIX_SCHEMA_ORG_S "Place";
-											output_p = AllocateSchemaTerm (term_url_s, "Place", "Entities that have a somewhat fixed, physical extension.");
+
+											/* Genotype */
+											term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000513";
+											output_p = AllocateSchemaTerm (term_url_s, "genotype", "Information, making the distinction between the actual physical material "
+																										 "(e.g. a cell) and the information about the genetic content (genotype).");
 
 											if (output_p)
 												{
 													if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
 														{
-															/* Date */
-															term_url_s = CONTEXT_PREFIX_SCHEMA_ORG_S "Date";
-															output_p = AllocateSchemaTerm (term_url_s, "Date", "A date value in ISO 8601 date format.");
-
-															if (output_p)
-																{
-																	if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																		{
-																			/* Pathogen */
-																			term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000643";
-																			output_p = AllocateSchemaTerm (term_url_s, "pathogen", "A biological agent that causes disease or illness to its host.");
-
-																			if (output_p)
-																				{
-																					if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																						{
-																							/* Phenotype */
-																							term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000651";
-																							output_p = AllocateSchemaTerm (term_url_s, "phenotype", "The observable form taken by some character (or group of characters) "
-																																						 "in an individual or an organism, excluding pathology and disease. The detectable outward manifestations of a specific genotype.");
-
-																							if (output_p)
-																								{
-																									if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																										{
-																											/* Genotype */
-																											term_url_s = CONTEXT_PREFIX_EXPERIMENTAL_FACTOR_ONTOLOGY_S "EFO_0000513";
-																											output_p = AllocateSchemaTerm (term_url_s, "genotype", "Information, making the distinction between the actual physical material "
-																																										 "(e.g. a cell) and the information about the genetic content (genotype).");
-
-																											if (output_p)
-																												{
-																													if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p))
-																														{
-																															return metadata_p;
-																														}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																													else
-																														{
-																															PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																															FreeSchemaTerm (output_p);
-																														}
-
-																												}		/* if (output_p) */
-																											else
-																												{
-																													PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																												}
-																										}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																									else
-																										{
-																											PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																											FreeSchemaTerm (output_p);
-																										}
-
-																								}		/* if (output_p) */
-																							else
-																								{
-																									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																								}
-
-																						}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																					else
-																						{
-																							PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																							FreeSchemaTerm (output_p);
-																						}
-
-																				}		/* if (output_p) */
-																			else
-																				{
-																					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																				}
-
-																		}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
-																	else
-																		{
-																			PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add output term %s to service metadata", term_url_s);
-																			FreeSchemaTerm (output_p);
-																		}
-
-																}		/* if (output_p) */
-															else
-																{
-																	PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate output term %s for service metadata", term_url_s);
-																}
-
-
+															return metadata_p;
 														}		/* if (AddSchemaTermToServiceMetadataOutput (metadata_p, output_p)) */
 													else
 														{
@@ -517,7 +434,7 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 
 																																			 if (marker_only_p)
 																																				 {
-																																					 if (json_array_append (results_p, marker_only_p) == 0)
+																																					 if (json_array_append_new (results_p, marker_only_p) == 0)
 																																						 {
 																																							 added_flag = true;
 																																						 }
@@ -579,6 +496,7 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 															results_p = NULL;
 														}
 
+													json_decref (population_id_results_p);
 												}		/* if (population_id_results_p) */
 
 										}		/* if ((results_p = json_array ()) != NULL) */
@@ -596,33 +514,46 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 				{
 					if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
 						{
-							if (!IsStringEmpty (marker_s))
-								{
-									bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
+							bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
 
-									if (child_p)
+							if (child_p)
+								{
+									/*
+									 * The marker name may contain full stops and although MongoDB 3.6+
+									 * allows these, the current version of the mongo-c driver (1.13)
+									 * does not, so we need to do the escaping ourselves
+									 */
+									char *escaped_marker_s = NULL;
+
+									if (SearchAndReplaceInString (marker_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
 										{
-											if (BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
+											if (BSON_APPEND_DOCUMENT (query_p, escaped_marker_s ? escaped_marker_s : marker_s, child_p))
 												{
 													results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
 												}
 
-											bson_destroy (child_p);
-										}
-									else
-										{
-											success_flag = false;
-										}
-								}		/* if (!IsStringEmpty (marker_s)) */
+											if (escaped_marker_s)
+												{
+													FreeCopiedString (escaped_marker_s);
+												}
+
+										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+
+
+									bson_destroy (child_p);
+								}
+							else
+								{
+									success_flag = false;
+								}
 
 						}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
-
 
 				}		/* if (IsStringEmpty (marker_s)) */
 			else
 				{
 					/*
-					 * Nothng to do!
+					 * Nothing to do!
 					 */
 				}
 
@@ -653,9 +584,9 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 
 											if (doc_p)
 												{
-													if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S))
+													if (CopyJSONString (entry_p, PGS_PARENT_A_S, doc_p, NULL))
 														{
-															if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S))
+															if (CopyJSONString (entry_p, PGS_PARENT_B_S, doc_p, NULL))
 																{
 																	json_t *marker_p = json_object_get (entry_p, marker_s);
 
@@ -735,16 +666,34 @@ static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker
 
 	if (dest_p)
 		{
-			if (CopyJSONString (src_p, dest_p, PGS_POPULATION_NAME_S))
+			if (CopyJSONString (src_p, PGS_POPULATION_NAME_S, dest_p, NULL))
 				{
-					if (CopyJSONString (src_p, dest_p, PGS_PARENT_A_S))
+					if (CopyJSONString (src_p, PGS_PARENT_A_S, dest_p,  NULL))
 						{
-							if (CopyJSONString (src_p, dest_p, PGS_PARENT_B_S))
+							if (CopyJSONString (src_p, PGS_PARENT_B_S, dest_p, NULL))
 								{
-									if (CopyJSONObject (src_p, dest_p, marker_s))
+									char *escaped_marker_s = NULL;
+
+									if (SearchAndReplaceInString (marker_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
 										{
-											return dest_p;
-										}		/* if (CopyJSONObject (src_p, dest_p, marker_s)) */
+											bool success_flag = false;
+
+											if (CopyJSONObject (src_p, marker_s, dest_p, escaped_marker_s))
+												{
+													success_flag = true;
+												}
+
+											if (escaped_marker_s)
+												{
+													FreeCopiedString (escaped_marker_s);
+												}
+
+											if (success_flag)
+												{
+													return dest_p;
+												}
+
+										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
 
 								}		/* if (CopyJSONString (src_p, dest_p, PGS_PARENT_B_S)) */
 
@@ -759,14 +708,14 @@ static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker
 }
 
 
-static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s)
+static bool CopyJSONString (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s)
 {
 	bool success_flag = false;
-	const char *value_s = GetJSONString (src_p, key_s);
+	const char *value_s = GetJSONString (src_p, src_key_s);
 
 	if (value_s)
 		{
-			if (SetJSONString (dest_p, key_s, value_s))
+			if (SetJSONString (dest_p, dest_key_s ? dest_key_s : src_key_s, value_s))
 				{
 					success_flag = true;
 				}
@@ -776,14 +725,14 @@ static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key
 }
 
 
-static bool CopyJSONObject (const json_t *src_p, json_t *dest_p, const char *key_s)
+static bool CopyJSONObject (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s)
 {
 	bool success_flag = false;
-	json_t *value_p = json_object_get (src_p, key_s);
+	json_t *value_p = json_object_get (src_p, src_key_s);
 
 	if (value_p)
 		{
-			if (json_object_set (dest_p, key_s, value_p) == 0)
+			if (json_object_set (dest_p, dest_key_s ? dest_key_s : src_key_s, value_p) == 0)
 				{
 					success_flag = true;
 				}
