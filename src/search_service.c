@@ -60,6 +60,11 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 
 static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s);
 
+static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker_s);
+
+
+static bool CopyJSONObject (const json_t *src_p, json_t *dest_p, const char *key_s);
+
 
 /*
  * API definitions
@@ -400,6 +405,7 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate input term %s for service metadata", term_url_s);
 								}
 
+							FreeServiceMetadata (metadata_p);
 						}		/* if (metadata_p) */
 					else
 						{
@@ -438,172 +444,186 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 			bool success_flag = true;
 			json_t *results_p = NULL;
 
-			if (!IsStringEmpty (marker_s))
+			if (!IsStringEmpty (population_s))
 				{
-					if (!IsStringEmpty (population_s))
+					if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s))
 						{
-
-						}		/* if (IsStringEmpty (population_s)) */
-					else
-						{
-							if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+							if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_varieties_collection_s))
 								{
-									if (!IsStringEmpty (marker_s))
+									if ((results_p = json_array ()) != NULL)
 										{
-											bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
+											json_t *population_id_results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
 
-											if (child_p)
+											if (population_id_results_p)
 												{
-													if (BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
+													const size_t num_results = json_array_size (population_id_results_p);
+													size_t i = 0;
+
+													while ((i < num_results) && success_flag)
 														{
-															results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
+															const json_t *entry_p = json_array_get (population_id_results_p, i);
+															const json_t *population_ids_p = json_object_get (entry_p, PGS_VARIETY_IDS_S);
+
+															if (population_ids_p)
+																{
+																	if (json_is_array (population_ids_p))
+																		{
+																			const size_t num_ids = json_array_size (population_ids_p);
+																			size_t j = 0;
+
+																			if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+																				{
+																					while ((j < num_ids) && success_flag)
+																						{
+																							const json_t *population_id_p = json_array_get (population_ids_p, j);
+																							bson_oid_t population_oid;
+																							bool added_flag = false;
+
+																							if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid))
+																								{
+																									/*
+																									 * Now we have the id we can get the population
+																									 */
+																									 bson_t *pop_query_p = bson_new ();
+
+																									 if (pop_query_p)
+																										 {
+																											 if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid))
+																												 {
+																													 json_t *populations_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, pop_query_p, NULL);
+
+																													 if (populations_p)
+																														 {
+																															 if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1))
+																																 {
+																																	 json_t *population_p = json_array_get (populations_p, 0);
+
+																																	 if (IsStringEmpty (marker_s))
+																																		 {
+																																			 /*
+																																			  * Add all of the markers
+																																			  */
+																																			 if (json_array_append (results_p, population_p) == 0)
+																																				 {
+																																					 added_flag = true;
+																																				 }
+																																		 }
+																																	 else
+																																		 {
+																																			 /*
+																																			  * Just add our marker
+																																			  */
+																																			 json_t *marker_only_p = GetForNamedMarker (population_p, marker_s);
+
+																																			 if (marker_only_p)
+																																				 {
+																																					 if (json_array_append (results_p, marker_only_p) == 0)
+																																						 {
+																																							 added_flag = true;
+																																						 }
+																																					 else
+																																						 {
+																																							 json_decref (marker_only_p);
+																																						 }
+																																				 }
+
+																																		 }
+
+																																 }		/* if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1)) */
+
+																															 json_decref (populations_p);
+																														 }		/* if (populations_p) */
+
+																												 }		/* if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid)) */
+
+																											 bson_destroy (pop_query_p);
+																										 }		/* if (pop_query_p) */
+
+																								}		/* if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid)) */
+																							else
+																								{
+																									success_flag = false;
+																								}
+
+																							if (added_flag)
+																								{
+																									++ j;
+																								}
+																							else
+																								{
+																									success_flag = false;
+																								}
+																						}		/* while ((j < num_ids) && success_flag) */
+
+																				}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s)) */
+
+																		}		/* if (json_is_array (population_ids_p)) */
+
+																}		/* if (population_ids_p) */
+
+															++ i;
+														}		/* while ((i < num_results) && success_flag) */
+
+													if (success_flag)
+														{
+															/*
+															 * Since we've done a search for a population with no marker specified,
+															 * we need to return all of the markers, i.e. the full record, so
+															 * we need to make sure that the flag for this is set.
+															 */
+															full_record_flag = true;
 														}
 													else
 														{
-															bson_destroy (child_p);
+															json_decref (results_p);
+															results_p = NULL;
 														}
-												}
-											else
-												{
-													success_flag = false;
-												}
-										}		/* if (!IsStringEmpty (marker_s)) */
+
+												}		/* if (population_id_results_p) */
+
+										}		/* if ((results_p = json_array ()) != NULL) */
 
 								}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
+						}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s)) */
+					else
+						{
+							PrintBSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, query_p, "Failed to add \"%s\": \"%s\" to query", PGS_POPULATION_NAME_S, population_s);
 						}
+
+				}		/* if (IsStringEmpty (population_s)) */
+			else if (!IsStringEmpty (marker_s))
+				{
+					if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+						{
+							if (!IsStringEmpty (marker_s))
+								{
+									bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
+
+									if (child_p)
+										{
+											if (BSON_APPEND_DOCUMENT (query_p, marker_s, child_p))
+												{
+													results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
+												}
+
+											bson_destroy (child_p);
+										}
+									else
+										{
+											success_flag = false;
+										}
+								}		/* if (!IsStringEmpty (marker_s)) */
+
+						}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
 
 				}		/* if (IsStringEmpty (marker_s)) */
 			else
 				{
-					if (!IsStringEmpty (population_s))
-						{
-							if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s))
-								{
-									if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_varieties_collection_s))
-										{
-											if ((results_p = json_array ()) != NULL)
-												{
-													json_t *population_id_results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
-
-													if (population_id_results_p)
-														{
-															const size_t num_results = json_array_size (population_id_results_p);
-															size_t i = 0;
-
-															while ((i < num_results) && success_flag)
-																{
-																	const json_t *entry_p = json_array_get (population_id_results_p, i);
-																	const json_t *population_ids_p = json_object_get (entry_p, PGS_VARIETY_IDS_S);
-
-																	if (population_ids_p)
-																		{
-																			if (json_is_array (population_ids_p))
-																				{
-																					const size_t num_ids = json_array_size (population_ids_p);
-																					size_t j = 0;
-
-																					if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
-																						{
-																							while ((j < num_ids) && success_flag)
-																								{
-																									const json_t *population_id_p = json_array_get (population_ids_p, j);
-																									bson_oid_t population_oid;
-																									bool added_flag = false;
-
-																									if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid))
-																										{
-																											/*
-																											 * Now we have the id we can get the population
-																											 */
-																											bson_t *pop_query_p = bson_new ();
-
-																											if (pop_query_p)
-																												{
-																													if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid))
-																														{
-																															json_t *populations_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, pop_query_p, NULL);
-
-																															if (populations_p)
-																																{
-																																	if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1))
-																																		{
-																																			json_t *population_p = json_array_get (populations_p, 0);
-
-																																			if (json_array_append (results_p, population_p) == 0)
-																																				{
-																																					added_flag = true;
-																																				}
-
-																																		}		/* if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1)) */
-
-																																	json_decref (populations_p);
-																																}		/* if (populations_p) */
-
-																														}		/* if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid)) */
-
-																													bson_destroy (pop_query_p);
-																												}		/* if (pop_query_p) */
-
-																										}		/* if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid)) */
-																									else
-																										{
-																											success_flag = false;
-																										}
-
-																									if (added_flag)
-																										{
-																											++ j;
-																										}
-																									else
-																										{
-																											success_flag = false;
-																										}
-																								}		/* while ((j < num_ids) && success_flag) */
-
-																						}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s)) */
-
-																				}		/* if (json_is_array (population_ids_p)) */
-
-																		}		/* if (population_ids_p) */
-
-																	++ i;
-																}		/* while ((i < num_results) && success_flag) */
-
-															if (success_flag)
-																{
-																	/*
-																	 * Since we've done a search for a population with no marker specified,
-																	 * we need to return all of the markers, i.e. the full record, so
-																	 * we need to make sure that the flag for this is set.
-																	 */
-																	full_record_flag = true;
-																}
-															else
-																{
-																	json_decref (results_p);
-																	results_p = NULL;
-																}
-
-														}		/* if (population_id_results_p) */
-
-												}		/* if ((results_p = json_array ()) != NULL) */
-
-										}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
-
-								}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s)) */
-							else
-								{
-									PrintBSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, query_p, "Failed to add \"%s\": \"%s\" to query", PGS_POPULATION_NAME_S, population_s);
-								}
-
-						}		/* if (IsStringEmpty (population_s)) */
-					else
-						{
-							/*
-							 * nothing to do!
-							 */
-							status = OS_IDLE;
-						}
+					/*
+					 * Nothng to do!
+					 */
 				}
 
 			if (results_p)
@@ -619,6 +639,9 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 									json_t *entry_p = json_array_get (results_p, i);
 									const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
 									json_t *dest_record_p = NULL;
+
+									json_object_del (entry_p, MONGO_ID_S);
+
 
 									if (full_record_flag)
 										{
@@ -705,6 +728,37 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 }
 
 
+
+static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker_s)
+{
+	json_t *dest_p = json_object ();
+
+	if (dest_p)
+		{
+			if (CopyJSONString (src_p, dest_p, PGS_POPULATION_NAME_S))
+				{
+					if (CopyJSONString (src_p, dest_p, PGS_PARENT_A_S))
+						{
+							if (CopyJSONString (src_p, dest_p, PGS_PARENT_B_S))
+								{
+									if (CopyJSONObject (src_p, dest_p, marker_s))
+										{
+											return dest_p;
+										}		/* if (CopyJSONObject (src_p, dest_p, marker_s)) */
+
+								}		/* if (CopyJSONString (src_p, dest_p, PGS_PARENT_B_S)) */
+
+						}		/* if (CopyJSONString (src_p, dest_p, PGS_PARENT_A_S)) */
+
+				}		/* if (CopyJSONString (src_p, dest_p, PGS_POPULATION_NAME_S)) */
+
+			json_decref (dest_p);
+		}		/* if (dest_p) */
+
+	return NULL;
+}
+
+
 static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key_s)
 {
 	bool success_flag = false;
@@ -713,6 +767,23 @@ static bool CopyJSONString (const json_t *src_p, json_t *dest_p, const char *key
 	if (value_s)
 		{
 			if (SetJSONString (dest_p, key_s, value_s))
+				{
+					success_flag = true;
+				}
+		}
+
+	return success_flag;
+}
+
+
+static bool CopyJSONObject (const json_t *src_p, json_t *dest_p, const char *key_s)
+{
+	bool success_flag = false;
+	json_t *value_p = json_object_get (src_p, key_s);
+
+	if (value_p)
+		{
+			if (json_object_set (dest_p, key_s, value_p) == 0)
 				{
 					success_flag = true;
 				}
