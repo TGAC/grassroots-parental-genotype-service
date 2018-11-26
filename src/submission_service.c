@@ -449,7 +449,24 @@ static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p)
 
 			if (strcmp (key_s, S_ID_S) != 0)
 				{
-					const char *value_s = GetJSONString (mappings_p, key_s);
+					/*
+					 * The marker name may contain full stops and although MongoDB 3.6+
+					 * allows these, the current version of the mongo-c driver (1.13)
+					 * does not, so we need to do the escaping ourselves
+					 */
+					char *escaped_key_s = NULL;
+					const char *value_s = NULL;
+
+					if (SearchAndReplaceInString (key_s, &escaped_key_s, ".", PGS_ESCAPED_DOT_S))
+						{
+							value_s = GetJSONString (mappings_p, escaped_key_s ? escaped_key_s : key_s);
+
+							if (escaped_key_s)
+								{
+									FreeCopiedString (escaped_key_s);
+								}
+
+						}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
 
 					if (value_s)
 						{
@@ -460,17 +477,20 @@ static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p)
 								{
 									if (!SetJSONString (marker_p, PGS_MAPPING_POSITION_S, value_s))
 										{
+											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, marker_p, "Failed to set \"%s\": \"%s\"", PGS_MAPPING_POSITION_S, value_s);
 											success_flag = false;
 										}
 								}		/* if (marker_p) */
 							else
 								{
+									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to get \"%s\"", key_s);
 									success_flag = false;
 								}
 
 						}		/* if (value_s) */
 					else
 						{
+							PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, mappings_p, "Failed to get value for \"%s\"", key_s);
 							success_flag = false;
 						}
 
