@@ -58,13 +58,15 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service *servi
 
 static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, bool full_record_flag, ParentalGenotypeServiceData *data_p);
 
+static json_t *DoPopulationSearch (bson_t *query_p, const char * const population_s, const char * const marker_s, const char * const escaped_marker_s, ParentalGenotypeServiceData *data_p);
 
-static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker_s);
-
+static json_t *GetForNamedMarker (const json_t *src_p, const char * const src_marker_s, const char * const dest_marker_s);
 
 static bool CopyJSONString (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s);
 
 static bool CopyJSONObject (const json_t *src_p, const char *src_key_s, json_t *dest_p, const char *dest_key_s);
+
+static bool UnescapeAllKeys (json_t *src_p);
 
 
 /*
@@ -351,6 +353,8 @@ static ParameterSet *IsResourceForParentalGenotypeSearchService (Service * UNUSE
 }
 
 
+
+
 static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char * const population_s, bool full_record_flag, ParentalGenotypeServiceData *data_p)
 {
 	OperationStatus status = OS_FAILED_TO_START;
@@ -358,299 +362,179 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 
 	if (query_p)
 		{
-			bool success_flag = true;
 			json_t *results_p = NULL;
 
-			if (!IsStringEmpty (population_s))
+			/*
+			 * The marker name may contain full stops and although MongoDB 3.6+
+			 * allows these, the current version of the mongo-c driver (1.13)
+			 * does not, so we need to do the escaping ourselves
+			 */
+			char *escaped_marker_s = NULL;
+
+			if (SearchAndReplaceInString (marker_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
 				{
-					if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s))
+					if (!IsStringEmpty (population_s))
 						{
-							if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_varieties_collection_s))
-								{
-									if ((results_p = json_array ()) != NULL)
-										{
-											json_t *population_id_results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
-
-											if (population_id_results_p)
-												{
-													const size_t num_results = json_array_size (population_id_results_p);
-													size_t i = 0;
-
-													while ((i < num_results) && success_flag)
-														{
-															const json_t *entry_p = json_array_get (population_id_results_p, i);
-															const json_t *population_ids_p = json_object_get (entry_p, PGS_VARIETY_IDS_S);
-
-															if (population_ids_p)
-																{
-																	if (json_is_array (population_ids_p))
-																		{
-																			const size_t num_ids = json_array_size (population_ids_p);
-																			size_t j = 0;
-
-																			if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
-																				{
-																					while ((j < num_ids) && success_flag)
-																						{
-																							const json_t *population_id_p = json_array_get (population_ids_p, j);
-																							bson_oid_t population_oid;
-																							bool added_flag = false;
-
-																							if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid))
-																								{
-																									/*
-																									 * Now we have the id we can get the population
-																									 */
-																									 bson_t *pop_query_p = bson_new ();
-
-																									 if (pop_query_p)
-																										 {
-																											 if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid))
-																												 {
-																													 json_t *populations_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, pop_query_p, NULL);
-
-																													 if (populations_p)
-																														 {
-																															 if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1))
-																																 {
-																																	 json_t *population_p = json_array_get (populations_p, 0);
-
-																																	 if (IsStringEmpty (marker_s))
-																																		 {
-																																			 /*
-																																			  * Add all of the markers
-																																			  */
-																																			 if (json_array_append (results_p, population_p) == 0)
-																																				 {
-																																					 added_flag = true;
-																																				 }
-																																		 }
-																																	 else
-																																		 {
-																																			 /*
-																																			  * Just add our marker
-																																			  */
-																																			 json_t *marker_only_p = GetForNamedMarker (population_p, marker_s);
-
-																																			 if (marker_only_p)
-																																				 {
-																																					 if (json_array_append_new (results_p, marker_only_p) == 0)
-																																						 {
-																																							 added_flag = true;
-																																						 }
-																																					 else
-																																						 {
-																																							 json_decref (marker_only_p);
-																																						 }
-																																				 }
-
-																																		 }
-
-																																 }		/* if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1)) */
-
-																															 json_decref (populations_p);
-																														 }		/* if (populations_p) */
-
-																												 }		/* if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid)) */
-
-																											 bson_destroy (pop_query_p);
-																										 }		/* if (pop_query_p) */
-
-																								}		/* if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid)) */
-																							else
-																								{
-																									success_flag = false;
-																								}
-
-																							if (added_flag)
-																								{
-																									++ j;
-																								}
-																							else
-																								{
-																									success_flag = false;
-																								}
-																						}		/* while ((j < num_ids) && success_flag) */
-
-																				}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s)) */
-
-																		}		/* if (json_is_array (population_ids_p)) */
-
-																}		/* if (population_ids_p) */
-
-															++ i;
-														}		/* while ((i < num_results) && success_flag) */
-
-													if (success_flag)
-														{
-															/*
-															 * Since we've done a search for a population with no marker specified,
-															 * we need to return all of the markers, i.e. the full record, so
-															 * we need to make sure that the flag for this is set.
-															 */
-															full_record_flag = true;
-														}
-													else
-														{
-															json_decref (results_p);
-															results_p = NULL;
-														}
-
-													json_decref (population_id_results_p);
-												}		/* if (population_id_results_p) */
-
-										}		/* if ((results_p = json_array ()) != NULL) */
-
-								}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
-
-						}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s)) */
-					else
-						{
-							PrintBSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, query_p, "Failed to add \"%s\": \"%s\" to query", PGS_POPULATION_NAME_S, population_s);
-						}
-
-				}		/* if (IsStringEmpty (population_s)) */
-			else if (!IsStringEmpty (marker_s))
-				{
-					if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
-						{
-							bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
-
-							if (child_p)
+							if ((results_p = DoPopulationSearch (query_p, population_s, marker_s, escaped_marker_s, data_p)) != NULL)
 								{
 									/*
-									 * The marker name may contain full stops and although MongoDB 3.6+
-									 * allows these, the current version of the mongo-c driver (1.13)
-									 * does not, so we need to do the escaping ourselves
+									 * Since we've done a search for a population with no marker specified,
+									 * we need to return all of the markers, i.e. the full record, so
+									 * we need to make sure that the flag for this is set.
 									 */
-									char *escaped_marker_s = NULL;
+									full_record_flag = true;
+								}
+							else
+								{
+									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "DoPopulationSearch failed for population \"%s\", marker \"%s\", escaped marker \"%s\"", population_s, marker_s ? marker_s: "", escaped_marker_s ? escaped_marker_s: "");
+								}
 
-									if (SearchAndReplaceInString (marker_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
+
+						}		/* if (IsStringEmpty (population_s)) */
+					else if (!IsStringEmpty (marker_s))
+						{
+							if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+								{
+									bson_t *child_p = BCON_NEW ("$exists", BCON_BOOL (true));
+
+									if (child_p)
 										{
 											if (BSON_APPEND_DOCUMENT (query_p, escaped_marker_s ? escaped_marker_s : marker_s, child_p))
 												{
 													results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
 												}
 
-											if (escaped_marker_s)
-												{
-													FreeCopiedString (escaped_marker_s);
-												}
-
-										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
-
-
-									bson_destroy (child_p);
-								}
-							else
-								{
-									success_flag = false;
-								}
-
-						}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
-
-				}		/* if (IsStringEmpty (marker_s)) */
-			else
-				{
-					/*
-					 * Nothing to do!
-					 */
-				}
-
-			if (results_p)
-				{
-					if (json_is_array (results_p))
-						{
-							size_t i = 0;
-							size_t num_added = 0;
-							const size_t num_results = json_array_size (results_p);
-
-							for (i = 0; i < num_results; ++ i)
-								{
-									json_t *entry_p = json_array_get (results_p, i);
-									const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
-									json_t *dest_record_p = NULL;
-
-									json_object_del (entry_p, MONGO_ID_S);
-
-
-									if (full_record_flag)
-										{
-											dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
+											bson_destroy (child_p);
 										}
 									else
 										{
-											json_t *doc_p = json_object ();
-
-											if (doc_p)
-												{
-													if (CopyJSONString (entry_p, PGS_PARENT_A_S, doc_p, NULL))
-														{
-															if (CopyJSONString (entry_p, PGS_PARENT_B_S, doc_p, NULL))
-																{
-																	json_t *marker_p = json_object_get (entry_p, marker_s);
-
-																	if (marker_p)
-																		{
-																			if (json_object_set (doc_p, marker_s, marker_p) == 0)
-																				{
-																					dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
-																				}
-																		}
-
-																}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S)) */
-															else
-																{
-																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_B_S);
-																}
-
-														}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S)) */
-													else
-														{
-															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_A_S);
-														}
-
-													json_decref (doc_p);
-												}		/* if (doc_p) */
 
 										}
 
-									if (dest_record_p)
+								}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
+						}		/* if (IsStringEmpty (marker_s)) */
+					else
+						{
+							/*
+							 * Nothing to do!
+							 */
+						}
+
+
+					if (results_p)
+						{
+							if (json_is_array (results_p))
+								{
+									size_t i = 0;
+									size_t num_added = 0;
+									const size_t num_results = json_array_size (results_p);
+
+									for (i = 0; i < num_results; ++ i)
 										{
-											if (AddResultToServiceJob (job_p, dest_record_p))
+											json_t *entry_p = json_array_get (results_p, i);
+											const char *name_s = GetJSONString (entry_p, PGS_POPULATION_NAME_S);
+											json_t *dest_record_p = NULL;
+
+											json_object_del (entry_p, MONGO_ID_S);
+
+
+											if (full_record_flag)
 												{
-													++ num_added;
+													/*
+													 * We need to escape any keys that have [dot] in them
+													 */
+
+													if (UnescapeAllKeys (entry_p))
+														{
+															dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
+														}
+													else
+														{
+															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "UnescapeAllKeys failed");
+														}
 												}
 											else
 												{
-													json_decref (dest_record_p);
+													json_t *doc_p = json_object ();
+
+													if (doc_p)
+														{
+															if (CopyJSONString (entry_p, PGS_PARENT_A_S, doc_p, NULL))
+																{
+																	if (CopyJSONString (entry_p, PGS_PARENT_B_S, doc_p, NULL))
+																		{
+																			json_t *marker_p = json_object_get (entry_p, escaped_marker_s ? escaped_marker_s : marker_s);
+
+																			if (marker_p)
+																				{
+																					if (json_object_set (doc_p, marker_s, marker_p) == 0)
+																						{
+																							dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
+																						}
+																				}
+
+																		}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_B_S)) */
+																	else
+																		{
+																			PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_B_S);
+																		}
+
+																}		/* if (CopyJSONString (entry_p, doc_p, PGS_PARENT_A_S)) */
+															else
+																{
+																	PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, entry_p, "Failed to copy %s", PGS_PARENT_A_S);
+																}
+
+															json_decref (doc_p);
+														}		/* if (doc_p) */
+
 												}
 
-										}		/* if (dest_record_p) */
+											if (dest_record_p)
+												{
+													if (AddResultToServiceJob (job_p, dest_record_p))
+														{
+															++ num_added;
+														}
+													else
+														{
+															json_decref (dest_record_p);
+														}
 
-									if (population_s)
-										{
+												}		/* if (dest_record_p) */
 
+											if (population_s)
+												{
+
+												}
 										}
-								}
 
-							if (num_added == num_results)
-								{
-									status = OS_SUCCEEDED;
-								}
-							else if (num_added > 0)
-								{
-									status = OS_PARTIALLY_SUCCEEDED;
-								}
-							else
-								{
-									status = OS_FAILED;
-								}
+									if (num_added == num_results)
+										{
+											status = OS_SUCCEEDED;
+										}
+									else if (num_added > 0)
+										{
+											status = OS_PARTIALLY_SUCCEEDED;
+										}
+									else
+										{
+											status = OS_FAILED;
+										}
 
-						}		/* if (json_is_array (results_p)) */
+								}		/* if (json_is_array (results_p)) */
 
-					json_decref (results_p);
-				}		/* if (results_p) */
+							json_decref (results_p);
+						}		/* if (results_p) */
+
+					if (escaped_marker_s)
+						{
+							FreeCopiedString (escaped_marker_s);
+						}
+
+				}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+
 
 			bson_destroy (query_p);
 		}		/* if (query_p) */
@@ -659,8 +543,156 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 }
 
 
+static json_t *DoPopulationSearch (bson_t *query_p, const char * const population_s, const char * const marker_s, const char * const escaped_marker_s, ParentalGenotypeServiceData *data_p)
+{
+	json_t *results_p = NULL;
 
-static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker_s)
+	if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s))
+		{
+			if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_varieties_collection_s))
+				{
+					results_p = json_array ();
+
+					if (results_p)
+						{
+							json_t *population_id_results_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, query_p, NULL);
+
+							if (population_id_results_p)
+								{
+									const size_t num_results = json_array_size (population_id_results_p);
+									size_t i = 0;
+									bool success_flag = true;
+
+									while ((i < num_results) && success_flag)
+										{
+											const json_t *entry_p = json_array_get (population_id_results_p, i);
+											const json_t *population_ids_p = json_object_get (entry_p, PGS_VARIETY_IDS_S);
+
+											if (population_ids_p)
+												{
+													if (json_is_array (population_ids_p))
+														{
+															const size_t num_ids = json_array_size (population_ids_p);
+															size_t j = 0;
+
+															if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s))
+																{
+																	while ((j < num_ids) && success_flag)
+																		{
+																			const json_t *population_id_p = json_array_get (population_ids_p, j);
+																			bson_oid_t population_oid;
+																			bool added_flag = false;
+
+																			if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid))
+																				{
+																					/*
+																					 * Now we have the id we can get the population
+																					 */
+																					 bson_t *pop_query_p = bson_new ();
+
+																					 if (pop_query_p)
+																						 {
+																							 if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid))
+																								 {
+																									 json_t *populations_p = GetAllMongoResultsAsJSON (data_p -> pgsd_mongo_p, pop_query_p, NULL);
+
+																									 if (populations_p)
+																										 {
+																											 if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1))
+																												 {
+																													 json_t *population_p = json_array_get (populations_p, 0);
+
+																													 if (IsStringEmpty (marker_s))
+																														 {
+																															 /*
+																															  * Add all of the markers
+																															  */
+																															 if (json_array_append (results_p, population_p) == 0)
+																																 {
+																																	 added_flag = true;
+																																 }
+																														 }
+																													 else
+																														 {
+																															 /*
+																															  * Just add our marker
+																															  */
+																															 json_t *marker_only_p = GetForNamedMarker (population_p, escaped_marker_s ? escaped_marker_s : marker_s, marker_s);
+
+																															 if (marker_only_p)
+																																 {
+																																	 if (json_array_append_new (results_p, marker_only_p) == 0)
+																																		 {
+																																			 added_flag = true;
+																																		 }
+																																	 else
+																																		 {
+																																			 json_decref (marker_only_p);
+																																		 }
+																																 }
+
+																														 }
+
+																												 }		/* if ((json_is_array (populations_p)) && (json_array_size (populations_p) == 1)) */
+
+																											 json_decref (populations_p);
+																										 }		/* if (populations_p) */
+
+																								 }		/* if (BSON_APPEND_OID (pop_query_p, "_id", &population_oid)) */
+
+																							 bson_destroy (pop_query_p);
+																						 }		/* if (pop_query_p) */
+
+																				}		/* if (GetIdFromJSONKeyValuePair (population_id_p, &population_oid)) */
+																			else
+																				{
+																					success_flag = false;
+																				}
+
+																			if (added_flag)
+																				{
+																					++ j;
+																				}
+																			else
+																				{
+																					success_flag = false;
+																				}
+																		}		/* while ((j < num_ids) && success_flag) */
+
+																}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_populations_collection_s)) */
+
+														}		/* if (json_is_array (population_ids_p)) */
+
+												}		/* if (population_ids_p) */
+
+											++ i;
+										}		/* while ((i < num_results) && success_flag) */
+
+									if (!success_flag)
+										{
+											json_decref (results_p);
+											results_p = NULL;
+										}
+
+									json_decref (population_id_results_p);
+								}		/* if (population_id_results_p) */
+
+						}		/* if ((results_p = json_array ()) != NULL) */
+
+				}		/* if (SetMongoToolCollection (data_p -> pgsd_mongo_p, data_p -> pgsd_accessions_collection_s)) */
+
+		}		/* if (BSON_APPEND_UTF8 (query_p, PGS_POPULATION_NAME_S, population_s)) */
+	else
+		{
+			PrintBSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, query_p, "Failed to add \"%s\": \"%s\" to query", PGS_POPULATION_NAME_S, population_s);
+		}
+
+	return results_p;
+}
+
+
+
+static json_t *GetForNamedMarker (const json_t *src_p, const char * const src_marker_s, const char * const dest_marker_s)
 {
 	json_t *dest_p = json_object ();
 
@@ -672,28 +704,10 @@ static json_t *GetForNamedMarker (const json_t *src_p, const char * const marker
 						{
 							if (CopyJSONString (src_p, PGS_PARENT_B_S, dest_p, NULL))
 								{
-									char *escaped_marker_s = NULL;
-
-									if (SearchAndReplaceInString (marker_s, &escaped_marker_s, ".", PGS_ESCAPED_DOT_S))
+									if (CopyJSONObject (src_p, src_marker_s, dest_p, dest_marker_s))
 										{
-											bool success_flag = false;
-
-											if (CopyJSONObject (src_p, marker_s, dest_p, escaped_marker_s))
-												{
-													success_flag = true;
-												}
-
-											if (escaped_marker_s)
-												{
-													FreeCopiedString (escaped_marker_s);
-												}
-
-											if (success_flag)
-												{
-													return dest_p;
-												}
-
-										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+											return dest_p;
+										}
 
 								}		/* if (CopyJSONString (src_p, dest_p, PGS_PARENT_B_S)) */
 
@@ -740,3 +754,48 @@ static bool CopyJSONObject (const json_t *src_p, const char *src_key_s, json_t *
 
 	return success_flag;
 }
+
+
+static bool UnescapeAllKeys (json_t *src_p)
+{
+	const char *key_s;
+	json_t *value_p;
+	void *tmp_p;
+
+	json_object_foreach_safe (src_p, tmp_p, key_s, value_p)
+		{
+			if (strstr (key_s, PGS_ESCAPED_DOT_S))
+				{
+					char *unescaped_key_s = NULL;
+
+					if (SearchAndReplaceInString (key_s, &unescaped_key_s, PGS_ESCAPED_DOT_S, "."))
+						{
+							if (json_object_set (src_p, unescaped_key_s, value_p) == 0)
+								{
+									if (json_object_del (src_p, key_s) != 0)
+										{
+											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, src_p, "Failed to delete \"%s\" key", key_s);
+											return false;
+										}
+
+								}		/* if (json_object_set (src_p, value_p) != 0) */
+							else
+								{
+									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, src_p, "Failed to set \"%s\" key", unescaped_key_s);
+									return false;
+								}
+
+							if (unescaped_key_s)
+								{
+									FreeCopiedString (unescaped_key_s);
+								}
+
+						}		/* if (SearchAndReplaceInString (key_s, &unescaped_key_s, PGS_ESCAPED_DOT_S, ".")) */
+
+				}		/* if (strstr (key_s, PGS_ESCAPED_DOT_S)) */
+
+		}		/* json_object_foreach_safe (src_p, key_s, value_p) */
+
+	return true;
+}
+

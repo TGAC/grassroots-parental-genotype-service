@@ -449,43 +449,44 @@ static bool AddGeneticMappingPositions (json_t *doc_p, json_t *mappings_p)
 
 			if (strcmp (key_s, S_ID_S) != 0)
 				{
-					/*
-					 * The marker name may contain full stops and although MongoDB 3.6+
-					 * allows these, the current version of the mongo-c driver (1.13)
-					 * does not, so we need to do the escaping ourselves
-					 */
-					char *escaped_key_s = NULL;
-					const char *value_s = NULL;
-
-					if (SearchAndReplaceInString (key_s, &escaped_key_s, ".", PGS_ESCAPED_DOT_S))
-						{
-							value_s = GetJSONString (mappings_p, escaped_key_s ? escaped_key_s : key_s);
-
-							if (escaped_key_s)
-								{
-									FreeCopiedString (escaped_key_s);
-								}
-
-						}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+					const char *value_s = GetJSONString (mappings_p, key_s);
 
 					if (value_s)
 						{
-							/* use key and value ... */
-							json_t *marker_p = json_object_get (doc_p, key_s);
+							/*
+							 * The marker name may contain full stops and although MongoDB 3.6+
+							 * allows these, the current version of the mongo-c driver (1.13)
+							 * does not, so we need to do the escaping ourselves
+							 */
+							char *escaped_key_s = NULL;
 
-							if (marker_p)
+							if (SearchAndReplaceInString (key_s, &escaped_key_s, ".", PGS_ESCAPED_DOT_S))
 								{
-									if (!SetJSONString (marker_p, PGS_MAPPING_POSITION_S, value_s))
+									/* use key and value ... */
+									json_t *marker_p = json_object_get (doc_p, escaped_key_s ? escaped_key_s : key_s);
+
+									if (marker_p)
 										{
-											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, marker_p, "Failed to set \"%s\": \"%s\"", PGS_MAPPING_POSITION_S, value_s);
+											if (!SetJSONString (marker_p, PGS_MAPPING_POSITION_S, value_s))
+												{
+													PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, marker_p, "Failed to set \"%s\": \"%s\"", PGS_MAPPING_POSITION_S, value_s);
+													success_flag = false;
+												}
+										}		/* if (marker_p) */
+									else
+										{
+											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to get \"%s\"", key_s);
 											success_flag = false;
 										}
-								}		/* if (marker_p) */
-							else
-								{
-									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to get \"%s\"", key_s);
-									success_flag = false;
-								}
+
+									if (escaped_key_s)
+										{
+											FreeCopiedString (escaped_key_s);
+										}
+
+								}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
+
+
 
 						}		/* if (value_s) */
 					else
@@ -612,24 +613,40 @@ static bool AddGenotypesRow (json_t *doc_p, json_t *genotypes_p, ParentalGenotyp
 							if (value_s)
 								{
 									/*
-									 * use key and value ...
+									 * The marker name may contain full stops and although MongoDB 3.6+
+									 * allows these, the current version of the mongo-c driver (1.13)
+									 * does not, so we need to do the escaping ourselves
 									 */
-									json_t *marker_p = json_object_get (doc_p, key_s);
+									char *escaped_key_s = NULL;
 
-									if (marker_p)
+									if (SearchAndReplaceInString (key_s, &escaped_key_s, ".", PGS_ESCAPED_DOT_S))
 										{
-											if (!SetJSONString (marker_p, accession_s, value_s))
+											/*
+											 * use key and value ...
+											 */
+											json_t *marker_p = json_object_get (doc_p, escaped_key_s ? escaped_key_s : key_s);
+
+											if (marker_p)
 												{
-													PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, marker_p, "Failed to set \"%s\": \"%s\"", accession_s, value_s);
+													if (!SetJSONString (marker_p, accession_s, value_s))
+														{
+															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, marker_p, "Failed to set \"%s\": \"%s\"", accession_s, value_s);
+															success_flag = false;
+														}
+
+												}		/* if (marker_p) */
+											else
+												{
+													PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to get marker for %s", key_s);
 													success_flag = false;
 												}
 
-										}		/* if (marker_p) */
-									else
-										{
-											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to get marker for %s", key_s);
-											success_flag = false;
-										}
+											if (escaped_key_s)
+												{
+													FreeCopiedString (escaped_key_s);
+												}
+
+										}		/* if (SearchAndReplaceInString (key_s, &escaped_marker_s, ".", PGS_DOT_S)) */
 
 								}		/* if (value_s) */
 							else
