@@ -765,16 +765,49 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 																									/*
 																									 * Save the document
 																									 */
-																									if (SaveMongoData (data_p -> pgsd_mongo_p, doc_p, data_p -> pgsd_populations_collection_s, NULL))
+																									bson_t *bson_doc_p = ConvertJSONToBSON (doc_p);
+
+																									if (bson_doc_p)
 																										{
-																											*parent_a_ss = parent_a_s;
-																											*parent_b_ss = parent_b_s;
-																										}
-																									else
-																										{
-																											success_flag = false;
-																											PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_populations_collection_s);
-																										}
+																											/*
+																											 * Is the doc ok to save in one go?
+																											 */
+																											if (bson_doc_p -> len < BSON_MAX_SIZE)
+																												{
+																													if (SaveMongoDataFromBSON (data_p -> pgsd_mongo_p, bson_doc_p, data_p -> pgsd_populations_collection_s, NULL))
+																														{
+																															*parent_a_ss = parent_a_s;
+																															*parent_b_ss = parent_b_s;
+																														}
+																													else
+																														{
+																															success_flag = false;
+																															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, doc_p, "Failed to save to \"%s\" -> \"%s\"", data_p -> pgsd_database_s, data_p -> pgsd_populations_collection_s);
+																														}
+
+																													bson_destroy (bson_doc_p);
+																												}
+																											else
+																												{
+																													/*
+																													 * We need to break the doc up into more
+																													 * manageable chunks so make a guess at how
+																													 * many docs we need
+																													 */
+																													size_t num_docs = (size_t) ((double) (bson_doc_p -> len) / (double) BSON_MAX_SIZE) + 1;
+
+
+																													/*
+																													 * Free the memory of the large doc
+																													 */
+																													bson_destroy (bson_doc_p);
+
+																												}
+
+
+																										}		/* if (bson_doc_p) */
+
+
 																								}
 
 																						}		/* if (SetJSONString (doc_p, PGS_POPULATION_NAME_S, name_s)) */

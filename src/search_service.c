@@ -378,6 +378,76 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 							if ((results_p = DoPopulationSearch (query_p, population_s, marker_s, escaped_marker_s, data_p)) != NULL)
 								{
 									/*
+									 * Check whether we need to amalgamate the results
+									 */
+									size_t num_results = json_array_size (results_p);
+
+									if (num_results > 0)
+										{
+											size_t i = 0;
+
+											while (i < num_results)
+												{
+													json_t *i_entry_p = json_array_get (results_p, i);
+													const char *i_name_s = GetJSONString (i_entry_p, PGS_POPULATION_NAME_S);
+
+													if (i_name_s)
+														{
+															size_t j = i + 1;
+
+															while (j < num_results)
+																{
+																	json_t *j_entry_p = json_array_get (results_p, j);
+																	const char *j_name_s = GetJSONString (j_entry_p, PGS_POPULATION_NAME_S);
+																	bool inc_flag = true;
+
+																	if (j_name_s)
+																		{
+																			if (strcmp (i_name_s, j_name_s) == 0)
+																				{
+																					if (json_object_update_missing (i_entry_p, j_entry_p) == 0)
+																						{
+																							if (json_array_remove (results_p, j) == 0)
+																								{
+																									inc_flag = false;
+																									-- num_results;
+																								}		/* if (json_array_remove (results_p, j) == 0) */
+																							else
+																								{
+																									PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, results_p, "Failed to remove index " SIZET_FMT, j);
+																								}
+
+																						}		/* if (json_object_update_missing (i_entry_p, j_entry_p) == 0) */
+																					else
+																						{
+																							PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, i_entry_p, "json_object_update_missing failed");
+																						}
+
+																				}		/* if (strcmp (i_name_s, j_name_s) == 0) */
+
+																		}		/* if (j_name_s) */
+																	else
+																		{
+																			PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, j_entry_p, "Failed to get \"%s\"", PGS_POPULATION_NAME_S);
+																		}
+
+																	if (inc_flag)
+																		{
+																			++ j;
+																		}
+																}
+														}
+													else
+														{
+															PrintJSONToErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, i_entry_p, "Failed to get \"%s\"", PGS_POPULATION_NAME_S);
+														}
+
+													++ i;
+												}
+
+										}		/* if (num_results > 0) */
+
+									/*
 									 * Since we've done a search for a population with no marker specified,
 									 * we need to return all of the markers, i.e. the full record, so
 									 * we need to make sure that the flag for this is set.
