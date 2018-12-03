@@ -114,11 +114,14 @@ Service *GetParentalGenotypeSubmissionService (void)
 								}
 
 						}		/* if (InitialiseService (.... */
+					else
+						{
+							FreeParentalGenotypeServiceData (data_p);
+						}
 
-					FreeParentalGenotypeServiceData (data_p);
-				}
+				}		/* if (data_p) */
 
-			FreeMemory (service_p);
+			FreeService (service_p);
 		}		/* if (service_p) */
 
 	return NULL;

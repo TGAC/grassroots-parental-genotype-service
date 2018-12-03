@@ -105,11 +105,17 @@ Service *GetParentalGenotypeSearchService (void)
 								}
 
 						}		/* if (InitialiseService (.... */
-
-					FreeParentalGenotypeServiceData (data_p);
+					else
+						{
+							FreeParentalGenotypeServiceData (data_p);
+						}
 				}
 
-			FreeMemory (service_p);
+			if (service_p)
+				{
+					FreeService (service_p);
+				}
+
 		}		/* if (service_p) */
 
 	return NULL;
