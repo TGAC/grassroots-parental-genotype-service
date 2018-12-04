@@ -162,7 +162,7 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 
 			def.st_string_value_s = NULL;
 
-			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", def, PL_BASIC)) != NULL)
+			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", def, PL_SIMPLE)) != NULL)
 				{
 					if (AddParameterKeyValuePair (param_p, PA_TABLE_COLUMN_HEADERS_PLACEMENT_S, PA_TABLE_COLUMN_HEADERS_PLACEMENT_FIRST_ROW_S))
 						{
