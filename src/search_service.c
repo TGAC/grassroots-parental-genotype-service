@@ -156,13 +156,13 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 
 			def.st_string_value_s = NULL;
 
-			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_MARKER.npt_type, S_MARKER.npt_name_s, "Marker", "The name of the marker to search for", def, PL_SIMPLE)) != NULL)
+			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_MARKER.npt_type, S_MARKER.npt_name_s, "Marker", "The name of the marker to search for", def, PL_ALL)) != NULL)
 				{
-					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", def, PL_SIMPLE)) != NULL)
+					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", def, PL_ALL)) != NULL)
 						{
 							def.st_boolean_value = false;
 
-							if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_type, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", def, PL_SIMPLE)) != NULL)
+							if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_type, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", def, PL_ALL)) != NULL)
 								{
 									return param_set_p;
 								}
