@@ -58,6 +58,7 @@ static bool CloseParentalGenotypeSubmissionService (Service *service_p);
 
 static ServiceMetadata *GetParentalGenotypeSubmissionServiceMetadata (Service *service_p);
 
+static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p);
 
 
 static bool AddChromosomes (json_t *doc_p, json_t *chromosomes_p);
@@ -99,6 +100,7 @@ Service *GetParentalGenotypeSubmissionService (void)
 																 RunParentalGenotypeSubmissionService,
 																 IsResourceForParentalGenotypeSubmissionService,
 																 GetParentalGenotypeSubmissionServiceParameters,
+																 GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters,
 																 ReleaseParentalGenotypeSubmissionServiceParameters,
 																 CloseParentalGenotypeSubmissionService,
 																 NULL,
@@ -184,6 +186,22 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 	return NULL;
 }
 
+
+static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p)
+{
+	bool success_flag = true;
+
+	if (strcmp (param_name_s, S_SET_DATA.npt_name_s) == 0)
+		{
+			*pt_p = S_SET_DATA.npt_name_s;
+		}
+	else
+		{
+			success_flag = false;
+		}
+
+	return success_flag;
+}
 
 static void ReleaseParentalGenotypeSubmissionServiceParameters (Service * UNUSED_PARAM (service_p), ParameterSet *params_p)
 {

@@ -46,6 +46,8 @@ static const char *GetParentalGenotypeSearchServiceInformationUri (Service *serv
 
 static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, Resource *resource_p, UserDetails *user_p);
 
+static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p);
+
 static void ReleaseParentalGenotypeSearchServiceParameters (Service *service_p, ParameterSet *params_p);
 
 static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, UserDetails *user_p, ProvidersStateTable *providers_p);
@@ -91,6 +93,7 @@ Service *GetParentalGenotypeSearchService (void)
 																 RunParentalGenotypeSearchService,
 																 IsResourceForParentalGenotypeSearchService,
 																 GetParentalGenotypeSearchServiceParameters,
+																 GetParentalGenotypeSearchServiceParameterTypesForNamedParameters,
 																 ReleaseParentalGenotypeSearchServiceParameters,
 																 CloseParentalGenotypeSearchService,
 																 NULL,
@@ -181,7 +184,6 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 					PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to add %s parameter", S_MARKER.npt_name_s);
 				}
 
-
 			FreeParameterSet (param_set_p);
 		}
 	else
@@ -191,6 +193,32 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 
 	return NULL;
 }
+
+
+static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p)
+{
+	bool success_flag = true;
+
+	if (strcmp (param_name_s, S_MARKER.npt_name_s) == 0)
+		{
+			*pt_p = S_MARKER.npt_name_s;
+		}
+	else if (strcmp (param_name_s, S_POPULATION.npt_name_s) == 0)
+		{
+			*pt_p = S_POPULATION.npt_name_s;
+		}
+	else if (strcmp (param_name_s, S_FULL_RECORD.npt_name_s) == 0)
+		{
+			*pt_p = S_FULL_RECORD.npt_name_s;
+		}
+	else
+		{
+			success_flag = false;
+		}
+
+	return success_flag;
+}
+
 
 
 static void ReleaseParentalGenotypeSearchServiceParameters (Service * UNUSED_PARAM (service_p), ParameterSet *params_p)
