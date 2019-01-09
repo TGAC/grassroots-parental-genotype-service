@@ -193,7 +193,7 @@ static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters
 
 	if (strcmp (param_name_s, S_SET_DATA.npt_name_s) == 0)
 		{
-			*pt_p = S_SET_DATA.npt_name_s;
+			*pt_p = S_SET_DATA.npt_type;
 		}
 	else
 		{
@@ -202,6 +202,7 @@ static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters
 
 	return success_flag;
 }
+
 
 static void ReleaseParentalGenotypeSubmissionServiceParameters (Service * UNUSED_PARAM (service_p), ParameterSet *params_p)
 {

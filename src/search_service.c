@@ -201,15 +201,15 @@ static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (st
 
 	if (strcmp (param_name_s, S_MARKER.npt_name_s) == 0)
 		{
-			*pt_p = S_MARKER.npt_name_s;
+			*pt_p = S_MARKER.npt_type;
 		}
 	else if (strcmp (param_name_s, S_POPULATION.npt_name_s) == 0)
 		{
-			*pt_p = S_POPULATION.npt_name_s;
+			*pt_p = S_POPULATION.npt_type;
 		}
 	else if (strcmp (param_name_s, S_FULL_RECORD.npt_name_s) == 0)
 		{
-			*pt_p = S_FULL_RECORD.npt_name_s;
+			*pt_p = S_FULL_RECORD.npt_type;
 		}
 	else
 		{
