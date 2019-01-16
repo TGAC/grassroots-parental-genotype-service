@@ -158,7 +158,7 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 			ServiceData *data_p = service_p -> se_data_p;
 			Parameter *param_p = NULL;
 			SharedType def;
-			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Parental Cross Data", NULL, false, data_p, param_set_p);
+			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Parental Cross Data", false, data_p, param_set_p);
 
 			InitSharedType (&def);
 
