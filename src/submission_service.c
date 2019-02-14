@@ -123,7 +123,7 @@ Service *GetParentalGenotypeSubmissionService (void)
 
 				}		/* if (data_p) */
 
-			FreeService (service_p);
+			FreeMemory (service_p);
 		}		/* if (service_p) */
 
 	return NULL;

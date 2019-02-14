@@ -116,7 +116,7 @@ Service *GetParentalGenotypeSearchService (void)
 
 			if (service_p)
 				{
-					FreeService (service_p);
+					FreeMemory (service_p);
 				}
 
 		}		/* if (service_p) */
