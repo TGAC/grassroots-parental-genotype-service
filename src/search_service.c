@@ -100,7 +100,8 @@ Service *GetParentalGenotypeSearchService (void)
 																 false,
 																 SY_SYNCHRONOUS,
 																 (ServiceData *) data_p,
-																 GetParentalGenotypeSearchServiceMetadata))
+																 GetParentalGenotypeSearchServiceMetadata,
+																 NULL))
 						{
 							if (ConfigureParentalGenotypeService (data_p))
 								{

@@ -107,7 +107,8 @@ Service *GetParentalGenotypeSubmissionService (void)
 																 false,
 																 SY_SYNCHRONOUS,
 																 (ServiceData *) data_p,
-																 GetParentalGenotypeSubmissionServiceMetadata))
+																 GetParentalGenotypeSubmissionServiceMetadata,
+																 NULL))
 						{
 
 							if (ConfigureParentalGenotypeService (data_p))
