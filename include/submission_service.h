@@ -34,7 +34,7 @@ extern "C"
 #endif
 
 
-PARENTAL_GENOTYPE_SERVICE_LOCAL Service *GetParentalGenotypeSubmissionService (void);
+PARENTAL_GENOTYPE_SERVICE_LOCAL Service *GetParentalGenotypeSubmissionService (GrassrootsServer *grassroots_p);
 
 
 #ifdef __cplusplus

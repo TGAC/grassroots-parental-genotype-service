@@ -35,7 +35,7 @@ extern "C"
 #endif
 
 
-PARENTAL_GENOTYPE_SERVICE_LOCAL Service *GetParentalGenotypeSearchService (void);
+PARENTAL_GENOTYPE_SERVICE_LOCAL Service *GetParentalGenotypeSearchService (GrassrootsServer *grassroots_p);
 
 
 

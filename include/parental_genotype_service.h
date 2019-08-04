@@ -44,7 +44,7 @@ extern "C"
  *
  * @ingroup dfw_field_trial_service
  */
-PARENTAL_GENOTYPE_SERVICE_API ServicesArray *GetServices (UserDetails *user_p);
+PARENTAL_GENOTYPE_SERVICE_API ServicesArray *GetServices (UserDetails *user_p, GrassrootsServer *grassroots_p);
 
 
 /**

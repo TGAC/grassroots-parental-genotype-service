@@ -83,7 +83,7 @@ static char *GetAccession (const json_t *genotypes_p, ParentalGenotypeServiceDat
  */
 
 
-Service *GetParentalGenotypeSubmissionService (void)
+Service *GetParentalGenotypeSubmissionService (GrassrootsServer *grassroots_p)
 {
 	Service *service_p = (Service *) AllocMemory (sizeof (Service));
 
@@ -108,7 +108,8 @@ Service *GetParentalGenotypeSubmissionService (void)
 																 SY_SYNCHRONOUS,
 																 (ServiceData *) data_p,
 																 GetParentalGenotypeSubmissionServiceMetadata,
-																 NULL))
+																 NULL,
+																 grassroots_p))
 						{
 
 							if (ConfigureParentalGenotypeService (data_p))

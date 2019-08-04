@@ -76,7 +76,7 @@ static bool UnescapeAllKeys (json_t *src_p);
  */
 
 
-Service *GetParentalGenotypeSearchService (void)
+Service *GetParentalGenotypeSearchService (GrassrootsServer *grassroots_p)
 {
 	Service *service_p = (Service *) AllocMemory (sizeof (Service));
 
@@ -101,7 +101,8 @@ Service *GetParentalGenotypeSearchService (void)
 																 SY_SYNCHRONOUS,
 																 (ServiceData *) data_p,
 																 GetParentalGenotypeSearchServiceMetadata,
-																 NULL))
+																 NULL,
+																 grassroots_p))
 						{
 							if (ConfigureParentalGenotypeService (data_p))
 								{

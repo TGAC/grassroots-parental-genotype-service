@@ -55,11 +55,11 @@
  */
 
 
-ServicesArray *GetServices (UserDetails *user_p)
+ServicesArray *GetServices (UserDetails *user_p, GrassrootsServer *grassroots_p)
 {
 	uint32 num_services = 0;
-	Service *submission_service_p = GetParentalGenotypeSubmissionService ();
-	Service *search_service_p = GetParentalGenotypeSearchService ();
+	Service *submission_service_p = GetParentalGenotypeSubmissionService (grassroots_p);
+	Service *search_service_p = GetParentalGenotypeSearchService (grassroots_p);
 
 	if (submission_service_p)
 		{
