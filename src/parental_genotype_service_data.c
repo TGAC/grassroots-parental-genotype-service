@@ -29,25 +29,18 @@
 
 ParentalGenotypeServiceData *AllocateParentalGenotypeServiceData  (void)
 {
-	MongoTool *tool_p = AllocateMongoTool (NULL);
+	ParentalGenotypeServiceData *data_p = (ParentalGenotypeServiceData *) AllocMemory (sizeof (ParentalGenotypeServiceData));
 
-	if (tool_p)
+	if (data_p)
 		{
-			ParentalGenotypeServiceData *data_p = (ParentalGenotypeServiceData *) AllocMemory (sizeof (ParentalGenotypeServiceData));
+			data_p -> pgsd_mongo_p = NULL;
+			data_p -> pgsd_database_s = NULL;
+			data_p -> pgsd_populations_collection_s = NULL;
+			data_p -> pgsd_varieties_collection_s = NULL;
+			data_p -> pgsd_name_mappings_p = NULL;
 
-			if (data_p)
-				{
-					data_p -> pgsd_mongo_p = tool_p;
-					data_p -> pgsd_database_s = NULL;
-					data_p -> pgsd_populations_collection_s = NULL;
-					data_p -> pgsd_varieties_collection_s = NULL;
-					data_p -> pgsd_name_mappings_p = NULL;
-
-					return data_p;
-				}
-
-			FreeMongoTool (tool_p);
-		}		/* if (tool_p) */
+			return data_p;
+		}
 
 	return NULL;
 }
@@ -77,12 +70,27 @@ bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p)
 				{
 					if ((data_p -> pgsd_populations_collection_s = GetJSONString (service_config_p, "populations_collection")) != NULL)
 						{
-							if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s))
-								{
-									data_p -> pgsd_name_mappings_p = json_object_get (service_config_p, "name_mappings");
+							GrassrootsServer *grassroots_p = GetGrassrootsServerFromService (data_p -> pgsd_base_data.sd_service_p);
 
-									success_flag = true;
+							if ((data_p -> pgsd_mongo_p = AllocateMongoTool (NULL, grassroots_p -> gs_mongo_manager_p)) != NULL)
+								{
+									if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s))
+										{
+											data_p -> pgsd_name_mappings_p = json_object_get (service_config_p, "name_mappings");
+
+											success_flag = true;
+										}
+									else
+										{
+											PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to set database to \"%s\"", data_p -> pgsd_database_s);
+										}
+
+								}		/* if ((data_p -> pgsd_mongo_p = AllocateMongoTool (NULL, grassroots_p -> gs_mongo_manager_p)) != NULL) */
+							else
+								{
+									PrintErrors (STM_LEVEL_SEVERE, __FILE__, __LINE__, "Failed to allocate MongoTool");
 								}
+
 						} 	/* if ((data_p -> pgsd_markers_collection_s = GetJSONString (service_config_p, "markers_collection")) != NULL) */
 
 				}		/* if ((data_p -> pgsd_accessions_collection_s = GetJSONString (service_config_p, "accessions_collection")) != NULL) */
