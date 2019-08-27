@@ -112,7 +112,7 @@ Service *GetParentalGenotypeSubmissionService (GrassrootsServer *grassroots_p)
 																 grassroots_p))
 						{
 
-							if (ConfigureParentalGenotypeService (data_p))
+							if (ConfigureParentalGenotypeService (data_p, grassroots_p))
 								{
 									return service_p;
 								}

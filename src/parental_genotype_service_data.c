@@ -57,7 +57,7 @@ void FreeParentalGenotypeServiceData (ParentalGenotypeServiceData *data_p)
 }
 
 
-bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p)
+bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p, GrassrootsServer *grassroots_p)
 {
 	bool success_flag = false;
 	const json_t *service_config_p = data_p -> pgsd_base_data.sd_config_p;
@@ -70,8 +70,6 @@ bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p)
 				{
 					if ((data_p -> pgsd_populations_collection_s = GetJSONString (service_config_p, "populations_collection")) != NULL)
 						{
-							GrassrootsServer *grassroots_p = GetGrassrootsServerFromService (data_p -> pgsd_base_data.sd_service_p);
-
 							if ((data_p -> pgsd_mongo_p = AllocateMongoTool (NULL, grassroots_p -> gs_mongo_manager_p)) != NULL)
 								{
 									if (SetMongoToolDatabase (data_p -> pgsd_mongo_p, data_p -> pgsd_database_s))

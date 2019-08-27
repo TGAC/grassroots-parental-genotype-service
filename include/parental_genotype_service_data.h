@@ -110,7 +110,7 @@ PARENTAL_GENOTYPE_SERVICE_LOCAL ParentalGenotypeServiceData *AllocateParentalGen
 PARENTAL_GENOTYPE_SERVICE_LOCAL void FreeParentalGenotypeServiceData (ParentalGenotypeServiceData *data_p);
 
 
-PARENTAL_GENOTYPE_SERVICE_LOCAL bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p);
+PARENTAL_GENOTYPE_SERVICE_LOCAL bool ConfigureParentalGenotypeService (ParentalGenotypeServiceData *data_p, GrassrootsServer *grassroots_p);
 
 #ifdef __cplusplus
 }
