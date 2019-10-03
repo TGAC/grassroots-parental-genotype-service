@@ -165,10 +165,12 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 				{
 					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", def, PL_ALL)) != NULL)
 						{
-							def.st_boolean_value = false;
+							SetSharedTypeBooleanValue (&def, false);
 
 							if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_type, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", def, PL_ALL)) != NULL)
 								{
+									ClearSharedType (&def, PT_BOOLEAN);
+
 									return param_set_p;
 								}
 							else
@@ -265,13 +267,20 @@ static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, Para
 
 							if (GetParameterValueFromParameterSet (param_set_p, S_POPULATION.npt_name_s, &population_value, true))
 								{
+									bool full_records_flag = false;
 									SharedType full_records_value;
+
 									InitSharedType (&full_records_value);
 
-									full_records_value.st_boolean_value = false;
-									GetParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_value, true);
+									if (GetCurrentParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_value))
+										{
+											if (full_records_value.st_boolean_value_p)
+												{
+													full_records_flag = *full_records_value.st_boolean_value_p;
+												}
+										}
 
-									DoSearch (job_p, marker_value.st_string_value_s, population_value.st_string_value_s, full_records_value.st_boolean_value, data_p);
+									DoSearch (job_p, marker_value.st_string_value_s, population_value.st_string_value_s, full_records_flag, data_p);
 
 								}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &population_value, true)) */
 
