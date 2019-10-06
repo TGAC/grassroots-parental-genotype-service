@@ -274,10 +274,7 @@ static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, Para
 
 									if (GetCurrentParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_value))
 										{
-											if (full_records_value.st_boolean_value_p)
-												{
-													full_records_flag = *full_records_value.st_boolean_value_p;
-												}
+											full_records_flag = full_records_value.st_boolean_value;
 										}
 
 									DoSearch (job_p, marker_value.st_string_value_s, population_value.st_string_value_s, full_records_flag, data_p);
