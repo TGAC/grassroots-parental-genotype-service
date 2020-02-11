@@ -29,6 +29,9 @@
 #include "math_utils.h"
 #include "string_utils.h"
 
+#include "string_parameter.h"
+#include "boolean_parameter.h"
+
 /*
  * Static declarations
  */
@@ -154,23 +157,16 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 		{
 			ServiceData *data_p = service_p -> se_data_p;
 			Parameter *param_p = NULL;
-			SharedType def;
 			ParameterGroup *group_p = NULL;
 
-			InitSharedType (&def);
-
-			def.st_string_value_s = NULL;
-
-			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_MARKER.npt_type, S_MARKER.npt_name_s, "Marker", "The name of the marker to search for", def, PL_ALL)) != NULL)
+			if ((param_p = EasyCreateAndAddStringParameterToParameterSet (data_p, param_set_p, group_p, S_MARKER.npt_type, S_MARKER.npt_name_s, "Marker", "The name of the marker to search for", NULL, PL_ALL)) != NULL)
 				{
-					if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", def, PL_ALL)) != NULL)
+					if ((param_p = EasyCreateAndAddStringParameterToParameterSet (data_p, param_set_p, group_p, S_POPULATION.npt_type, S_POPULATION.npt_name_s, "Population", "The name of the population to search for", NULL, PL_ALL)) != NULL)
 						{
-							SetSharedTypeBooleanValue (&def, false);
+							bool b = false;
 
-							if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_type, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", def, PL_ALL)) != NULL)
+							if ((param_p = EasyCreateAndAddBooleanParameterToParameterSet (data_p, param_set_p, group_p, S_FULL_RECORD.npt_name_s, "Full Records", "Return the full matching populations for marker search results", &b, PL_ALL)) != NULL)
 								{
-									ClearSharedType (&def, PT_BOOLEAN);
-
 									return param_set_p;
 								}
 							else
@@ -257,29 +253,25 @@ static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, Para
 
 			if (param_set_p)
 				{
-					SharedType marker_value;
-					InitSharedType (&marker_value);
+					const char *marker_s = NULL;
 
-					if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &marker_value, true))
+					if (GetCurrentStringParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &marker_s))
 						{
-							SharedType population_value;
-							InitSharedType (&population_value);
-
-							if (GetParameterValueFromParameterSet (param_set_p, S_POPULATION.npt_name_s, &population_value, true))
+							if (!IsStringEmpty (marker_s))
 								{
-									bool full_records_flag = false;
-									SharedType full_records_value;
+									const char *population_s = NULL;
 
-									InitSharedType (&full_records_value);
-
-									if (GetCurrentParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_value))
+									if (GetCurrentStringParameterValueFromParameterSet (param_set_p, S_POPULATION.npt_name_s, &population_s))
 										{
-											full_records_flag = full_records_value.st_boolean_value;
-										}
+											const bool *full_records_flag_p = NULL;
 
-									DoSearch (job_p, marker_value.st_string_value_s, population_value.st_string_value_s, full_records_flag, data_p);
+											GetCurrentBooleanParameterValueFromParameterSet (param_set_p, S_FULL_RECORD.npt_name_s, &full_records_flag_p);
 
-								}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &population_value, true)) */
+											DoSearch (job_p, marker_s, population_s, full_records_flag_p ? *full_records_flag_p : false, data_p);
+
+										}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &population_value, true)) */
+
+								}
 
 						}		/* if (GetParameterValueFromParameterSet (param_set_p, S_MARKER.npt_name_s, &marker_value, true)) */
 

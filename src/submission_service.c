@@ -31,13 +31,15 @@
 #include "string_utils.h"
 #include "schema_keys.h"
 
+#include "json_parameter.h"
+
 /*
  * Static declarations
  */
 
 static const char * const S_ID_S = "id";
 
-static NamedParameterType S_SET_DATA = { "Data", PT_TABLE };
+static NamedParameterType S_SET_DATA = { "Data", PT_JSON_TABLE };
 
 
 static const char *GetParentalGenotypeSubmissionServiceName (Service *service_p);
@@ -158,14 +160,9 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 		{
 			ServiceData *data_p = service_p -> se_data_p;
 			Parameter *param_p = NULL;
-			SharedType def;
 			ParameterGroup *group_p = CreateAndAddParameterGroupToParameterSet ("Parental Cross Data", false, data_p, param_set_p);
 
-			InitSharedType (&def);
-
-			def.st_string_value_s = NULL;
-
-			if ((param_p = EasyCreateAndAddParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", def, PL_SIMPLE)) != NULL)
+			if ((param_p = EasyCreateAndAddJSONParameterToParameterSet (data_p, param_set_p, group_p, S_SET_DATA.npt_type, S_SET_DATA.npt_name_s, "Data", "The parental-cross data", NULL, PL_SIMPLE)) != NULL)
 				{
 					if (AddParameterKeyStringValuePair (param_p, PA_TABLE_COLUMN_HEADERS_PLACEMENT_S, PA_TABLE_COLUMN_HEADERS_PLACEMENT_FIRST_ROW_S))
 						{
@@ -239,52 +236,33 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 
 			if (param_set_p)
 				{
-					SharedType data_value;
-					InitSharedType (&data_value);
+					const json_t *data_json_p = NULL;
 
-					if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true))
+					if (GetCurrentJSONParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_json_p))
 						{
-							const char *data_s = data_value.st_string_value_s;
+							status = OS_FAILED;
 
-							/*
-							 * Has a spreadsheet been uploaded?
-							 */
-							if (! (IsStringEmpty (data_s)))
+							if (data_json_p)
 								{
-									json_error_t e;
-									json_t *data_json_p = NULL;
+									const char *parent_a_s = NULL;
+									const char *parent_b_s = NULL;
+									bson_oid_t *id_p = SaveMarkers (&parent_a_s, &parent_b_s, data_json_p, data_p);
 
-									/*
-									 * The data could be either an array of json objects
-									 * or a tabular string. so try it as json array first
-									 */
-									data_json_p = json_loads (data_s, 0, &e);
-
-									status = OS_FAILED;
-
-									if (data_json_p)
+									if (id_p)
 										{
-											const char *parent_a_s = NULL;
-											const char *parent_b_s = NULL;
-											bson_oid_t *id_p = SaveMarkers (&parent_a_s, &parent_b_s, data_json_p, data_p);
-
-											if (id_p)
+											if (SaveVarieties (parent_a_s, parent_b_s, id_p, data_p))
 												{
-													if (SaveVarieties (parent_a_s, parent_b_s, id_p, data_p))
-														{
-															status = OS_SUCCEEDED;
-														}
+													status = OS_SUCCEEDED;
+												}
 
-													FreeBSONOid (id_p);
-												}		/* if (id_p) */
+											FreeBSONOid (id_p);
+										}		/* if (id_p) */
 
-											json_decref (data_json_p);
-										}		/* if (data_json_p) */
+									json_decref (data_json_p);
+								}		/* if (data_json_p) */
 
-								}		/* if (! (IsStringEmpty (data_s))) */
 
 						}		/* if (GetParameterValueFromParameterSet (param_set_p, S_SET_DATA.npt_name_s, &data_value, true)) */
-
 
 
 				}		/* if (param_set_p) */
