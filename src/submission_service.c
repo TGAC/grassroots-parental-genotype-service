@@ -42,11 +42,11 @@ static const char * const S_ID_S = "id";
 static NamedParameterType S_SET_DATA = { "Data", PT_JSON_TABLE };
 
 
-static const char *GetParentalGenotypeSubmissionServiceName (Service *service_p);
+static const char *GetParentalGenotypeSubmissionServiceName (const Service *service_p);
 
-static const char *GetParentalGenotypeSubmissionServiceDesciption (Service *service_p);
+static const char *GetParentalGenotypeSubmissionServiceDesciption (const Service *service_p);
 
-static const char *GetParentalGenotypeSubmissionServiceInformationUri (Service *service_p);
+static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Service *service_p);
 
 static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, Resource *resource_p, UserDetails *user_p);
 
@@ -60,7 +60,7 @@ static bool CloseParentalGenotypeSubmissionService (Service *service_p);
 
 static ServiceMetadata *GetParentalGenotypeSubmissionServiceMetadata (Service *service_p);
 
-static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p);
+static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p);
 
 
 static bool AddChromosomes (json_t *doc_p, json_t *chromosomes_p);
@@ -134,19 +134,19 @@ Service *GetParentalGenotypeSubmissionService (GrassrootsServer *grassroots_p)
 
 
 
-static const char *GetParentalGenotypeSubmissionServiceName (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSubmissionServiceName (const Service * UNUSED_PARAM (service_p))
 {
 	return "ParentalGenotype submission service";
 }
 
 
-static const char *GetParentalGenotypeSubmissionServiceDesciption (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSubmissionServiceDesciption (const Service * UNUSED_PARAM (service_p))
 {
 	return "A service to submit parental-cross genotype data";
 }
 
 
-static const char *GetParentalGenotypeSubmissionServiceInformationUri (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Service * UNUSED_PARAM (service_p))
 {
 	return NULL;
 }
@@ -185,7 +185,7 @@ static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *se
 }
 
 
-static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p)
+static bool GetParentalGenotypeSubmissionServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p)
 {
 	bool success_flag = true;
 
