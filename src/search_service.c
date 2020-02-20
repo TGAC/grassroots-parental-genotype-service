@@ -41,15 +41,15 @@ static NamedParameterType S_POPULATION = { "Population", PT_KEYWORD };
 static NamedParameterType S_FULL_RECORD = { "Return entire populations", PT_BOOLEAN };
 
 
-static const char *GetParentalGenotypeSearchServiceName (Service *service_p);
+static const char *GetParentalGenotypeSearchServiceName (const Service *service_p);
 
-static const char *GetParentalGenotypeSearchServiceDesciption (Service *service_p);
+static const char *GetParentalGenotypeSearchServiceDesciption (const Service *service_p);
 
-static const char *GetParentalGenotypeSearchServiceInformationUri (Service *service_p);
+static const char *GetParentalGenotypeSearchServiceInformationUri (const Service *service_p);
 
 static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, Resource *resource_p, UserDetails *user_p);
 
-static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p);
+static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p);
 
 static void ReleaseParentalGenotypeSearchServiceParameters (Service *service_p, ParameterSet *params_p);
 
@@ -131,19 +131,19 @@ Service *GetParentalGenotypeSearchService (GrassrootsServer *grassroots_p)
 
 
 
-static const char *GetParentalGenotypeSearchServiceName (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSearchServiceName (const Service * UNUSED_PARAM (service_p))
 {
 	return "ParentalGenotype search service";
 }
 
 
-static const char *GetParentalGenotypeSearchServiceDesciption (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSearchServiceDesciption (const Service * UNUSED_PARAM (service_p))
 {
 	return "A service to search field trial data";
 }
 
 
-static const char *GetParentalGenotypeSearchServiceInformationUri (Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSearchServiceInformationUri (const Service * UNUSED_PARAM (service_p))
 {
 	return NULL;
 }
@@ -195,7 +195,7 @@ static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *servic
 }
 
 
-static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (struct Service *service_p, const char *param_name_s, ParameterType *pt_p)
+static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p)
 {
 	bool success_flag = true;
 
