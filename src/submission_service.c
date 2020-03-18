@@ -44,7 +44,9 @@ static NamedParameterType S_SET_DATA = { "Data", PT_JSON_TABLE };
 
 static const char *GetParentalGenotypeSubmissionServiceName (const Service *service_p);
 
-static const char *GetParentalGenotypeSubmissionServiceDesciption (const Service *service_p);
+static const char *GetParentalGenotypeSubmissionServiceDescription (const Service *service_p);
+
+static const char *GetParentalGenotypeSubmissionServiceAlias (const Service *service_p);
 
 static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Service *service_p);
 
@@ -97,7 +99,8 @@ Service *GetParentalGenotypeSubmissionService (GrassrootsServer *grassroots_p)
 				{
 					if (InitialiseService (service_p,
 																 GetParentalGenotypeSubmissionServiceName,
-																 GetParentalGenotypeSubmissionServiceDesciption,
+																 GetParentalGenotypeSubmissionServiceDescription,
+																 GetParentalGenotypeSubmissionServiceAlias,
 																 GetParentalGenotypeSubmissionServiceInformationUri,
 																 RunParentalGenotypeSubmissionService,
 																 IsResourceForParentalGenotypeSubmissionService,
@@ -140,9 +143,15 @@ static const char *GetParentalGenotypeSubmissionServiceName (const Service * UNU
 }
 
 
-static const char *GetParentalGenotypeSubmissionServiceDesciption (const Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSubmissionServiceDescription (const Service * UNUSED_PARAM (service_p))
 {
 	return "A service to submit parental-cross genotype data";
+}
+
+
+static const char *GetParentalGenotypeSubmissionServiceAlias (const Service * UNUSED_PARAM (service_p))
+{
+	return "submit_parental_genotypes";
 }
 
 

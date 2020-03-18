@@ -43,7 +43,9 @@ static NamedParameterType S_FULL_RECORD = { "Return entire populations", PT_BOOL
 
 static const char *GetParentalGenotypeSearchServiceName (const Service *service_p);
 
-static const char *GetParentalGenotypeSearchServiceDesciption (const Service *service_p);
+static const char *GetParentalGenotypeSearchServiceDescription (const Service *service_p);
+
+static const char *GetParentalGenotypeSearchServiceAlias (const Service *service_p);
 
 static const char *GetParentalGenotypeSearchServiceInformationUri (const Service *service_p);
 
@@ -91,7 +93,8 @@ Service *GetParentalGenotypeSearchService (GrassrootsServer *grassroots_p)
 				{
 					if (InitialiseService (service_p,
 																 GetParentalGenotypeSearchServiceName,
-																 GetParentalGenotypeSearchServiceDesciption,
+																 GetParentalGenotypeSearchServiceDescription,
+																 GetParentalGenotypeSearchServiceAlias,
 																 GetParentalGenotypeSearchServiceInformationUri,
 																 RunParentalGenotypeSearchService,
 																 IsResourceForParentalGenotypeSearchService,
@@ -137,11 +140,16 @@ static const char *GetParentalGenotypeSearchServiceName (const Service * UNUSED_
 }
 
 
-static const char *GetParentalGenotypeSearchServiceDesciption (const Service * UNUSED_PARAM (service_p))
+static const char *GetParentalGenotypeSearchServiceDescription (const Service * UNUSED_PARAM (service_p))
 {
 	return "A service to search field trial data";
 }
 
+
+static const char *GetParentalGenotypeSearchServiceAlias (const Service * UNUSED_PARAM (service_p))
+{
+	return "search_parental_genotypes";
+}
 
 static const char *GetParentalGenotypeSearchServiceInformationUri (const Service * UNUSED_PARAM (service_p))
 {
