@@ -98,6 +98,9 @@ typedef struct /*PARENTAL_GENOTYPE_SERVICE_LOCAL*/ ParentalGenotypeServiceData
 
 #endif 		/* #ifndef DOXYGEN_SHOULD_SKIP_THIS */
 
+/** The prefix to use for Field Trial Service aliases. */
+#define PG_GROUP_ALIAS_PREFIX_S "field_trial"
+
 
 #ifdef __cplusplus
 extern "C"

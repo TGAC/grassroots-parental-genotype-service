@@ -148,7 +148,7 @@ static const char *GetParentalGenotypeSearchServiceDescription (const Service * 
 
 static const char *GetParentalGenotypeSearchServiceAlias (const Service * UNUSED_PARAM (service_p))
 {
-	return "parental_genotypes/search";
+	return PG_GROUP_ALIAS_PREFIX_S SERVICE_GROUP_ALIAS_SEPARATOR "search";
 }
 
 static const char *GetParentalGenotypeSearchServiceInformationUri (const Service * UNUSED_PARAM (service_p))
