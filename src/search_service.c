@@ -142,7 +142,7 @@ static const char *GetParentalGenotypeSearchServiceName (const Service * UNUSED_
 
 static const char *GetParentalGenotypeSearchServiceDescription (const Service * UNUSED_PARAM (service_p))
 {
-	return "A service to search field trial data";
+	return "A service to get the parental data for given markers and populations";
 }
 
 
