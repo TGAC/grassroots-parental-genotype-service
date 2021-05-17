@@ -267,7 +267,6 @@ static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, 
 											FreeBSONOid (id_p);
 										}		/* if (id_p) */
 
-									json_decref (data_json_p);
 								}		/* if (data_json_p) */
 
 
