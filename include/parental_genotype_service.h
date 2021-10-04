@@ -42,7 +42,6 @@ extern "C"
  * @return The ServicesArray containing the DFW Field Trial Service. or
  * <code>NULL</code> upon error.
  *
- * @ingroup dfw_field_trial_service
  */
 PARENTAL_GENOTYPE_SERVICE_API ServicesArray *GetServices (UserDetails *user_p, GrassrootsServer *grassroots_p);
 
@@ -52,7 +51,6 @@ PARENTAL_GENOTYPE_SERVICE_API ServicesArray *GetServices (UserDetails *user_p, G
  *
  * @param services_p The ServicesArray to free.
  *
- * @ingroup dfw_field_trial_service
  */
 PARENTAL_GENOTYPE_SERVICE_API void ReleaseServices (ServicesArray *services_p);
 
