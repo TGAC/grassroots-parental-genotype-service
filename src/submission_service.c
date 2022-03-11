@@ -151,7 +151,7 @@ static const char *GetParentalGenotypeSubmissionServiceDescription (const Servic
 
 static const char *GetParentalGenotypeSubmissionServiceAlias (const Service * UNUSED_PARAM (service_p))
 {
-	return PG_GROUP_ALIAS_PREFIX_S SERVICE_GROUP_ALIAS_SEPARATOR "submit";
+	return GT_GROUP_ALIAS_PREFIX_S SERVICE_GROUP_ALIAS_SEPARATOR "submit";
 }
 
 
