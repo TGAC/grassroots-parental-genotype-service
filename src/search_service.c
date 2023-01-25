@@ -49,7 +49,7 @@ static const char *GetParentalGenotypeSearchServiceAlias (const Service *service
 
 static const char *GetParentalGenotypeSearchServiceInformationUri (const Service *service_p);
 
-static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, Resource *resource_p, UserDetails *user_p);
+static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource *resource_p, UserDetails *user_p);
 
 static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p);
 
@@ -57,7 +57,7 @@ static void ReleaseParentalGenotypeSearchServiceParameters (Service *service_p, 
 
 static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, UserDetails *user_p, ProvidersStateTable *providers_p);
 
-static ParameterSet *IsResourceForParentalGenotypeSearchService (Service *service_p, Resource *resource_p, Handler *handler_p);
+static ParameterSet *IsResourceForParentalGenotypeSearchService (Service *service_p, DataResource *resource_p, Handler *handler_p);
 
 static bool CloseParentalGenotypeSearchService (Service *service_p);
 
@@ -157,7 +157,7 @@ static const char *GetParentalGenotypeSearchServiceInformationUri (const Service
 }
 
 
-static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, Resource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
+static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
 {
 	ParameterSet *param_set_p = AllocateParameterSet ("ParentalGenotype search service parameters", "The parameters used for the ParentalGenotype search service");
 
@@ -389,7 +389,7 @@ static ServiceMetadata *GetParentalGenotypeSearchServiceMetadata (Service * UNUS
 }
 
 
-static ParameterSet *IsResourceForParentalGenotypeSearchService (Service * UNUSED_PARAM (service_p), Resource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
+static ParameterSet *IsResourceForParentalGenotypeSearchService (Service * UNUSED_PARAM (service_p), DataResource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
 {
 	return NULL;
 }
@@ -559,7 +559,7 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 
 													if (UnescapeAllKeys (entry_p))
 														{
-															dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
+															dest_record_p = GetDataResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, entry_p);
 														}
 													else
 														{
@@ -582,7 +582,7 @@ static void DoSearch (ServiceJob *job_p, const char * const marker_s, const char
 																				{
 																					if (json_object_set (doc_p, marker_s, marker_p) == 0)
 																						{
-																							dest_record_p = GetResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
+																							dest_record_p = GetDataResourceAsJSONByParts (PROTOCOL_INLINE_S, NULL, name_s, doc_p);
 																						}
 																				}
 

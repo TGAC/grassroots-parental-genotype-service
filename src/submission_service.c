@@ -50,13 +50,13 @@ static const char *GetParentalGenotypeSubmissionServiceAlias (const Service *ser
 
 static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Service *service_p);
 
-static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, Resource *resource_p, UserDetails *user_p);
+static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource *resource_p, UserDetails *user_p);
 
 static void ReleaseParentalGenotypeSubmissionServiceParameters (Service *service_p, ParameterSet *params_p);
 
 static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, ParameterSet *param_set_p, UserDetails *user_p, ProvidersStateTable *providers_p);
 
-static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service *service_p, Resource *resource_p, Handler *handler_p);
+static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service *service_p, DataResource *resource_p, Handler *handler_p);
 
 static bool CloseParentalGenotypeSubmissionService (Service *service_p);
 
@@ -161,7 +161,7 @@ static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Ser
 }
 
 
-static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, Resource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
+static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
 {
 	ParameterSet *param_set_p = AllocateParameterSet ("Parental Genotype submission service parameters", "The parameters used for the Parental Genotype submission service");
 
@@ -978,7 +978,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 }
 
 
-static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service * UNUSED_PARAM (service_p), Resource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
+static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service * UNUSED_PARAM (service_p), DataResource * UNUSED_PARAM (resource_p), Handler * UNUSED_PARAM (handler_p))
 {
 	return NULL;
 }
