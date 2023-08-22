@@ -783,7 +783,7 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 																											 */
 																											if (bson_doc_p -> len < BSON_MAX_SIZE)
 																												{
-																													if (SaveMongoDataFromBSON (data_p -> pgsd_mongo_p, bson_doc_p, data_p -> pgsd_populations_collection_s, NULL))
+																													if (SaveMongoDataFromBSON (data_p -> pgsd_mongo_p, bson_doc_p, data_p -> pgsd_populations_collection_s, NULL, NULL))
 																														{
 																															*parent_a_ss = parent_a_s;
 																															*parent_b_ss = parent_b_s;
@@ -915,7 +915,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 														{
 															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
 																{
-																	if (SaveMongoData (mongo_p, accession_data_p, NULL, query_p))
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL, query_p))
 																		{
 																			success_flag = true;
 																		}
@@ -948,7 +948,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 														{
 															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
 																{
-																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL))
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL, NULL))
 																		{
 																			success_flag = true;
 																		}
