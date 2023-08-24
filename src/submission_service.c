@@ -783,7 +783,7 @@ static bson_oid_t *SaveMarkers (const char **parent_a_ss, const char **parent_b_
 																											 */
 																											if (bson_doc_p -> len < BSON_MAX_SIZE)
 																												{
-																													if (SaveMongoDataFromBSON (data_p -> pgsd_mongo_p, bson_doc_p, data_p -> pgsd_populations_collection_s, NULL, NULL))
+																													if (SaveMongoDataFromBSON (data_p -> pgsd_mongo_p, bson_doc_p, data_p -> pgsd_populations_collection_s, NULL))
 																														{
 																															*parent_a_ss = parent_a_s;
 																															*parent_b_ss = parent_b_s;
