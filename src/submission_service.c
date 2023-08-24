@@ -915,7 +915,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 														{
 															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
 																{
-																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL, query_p))
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, query_p))
 																		{
 																			success_flag = true;
 																		}
@@ -948,7 +948,7 @@ static bool SaveVariety (const char *parent_s, const bson_oid_t *id_p, MongoTool
 														{
 															if (AddCompoundIdToJSONArray (marker_ids_p, id_p))
 																{
-																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL, NULL))
+																	if (SaveMongoData (mongo_p, accession_data_p, NULL, NULL))
 																		{
 																			success_flag = true;
 																		}
