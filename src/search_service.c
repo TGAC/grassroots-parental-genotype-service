@@ -49,13 +49,13 @@ static const char *GetParentalGenotypeSearchServiceAlias (const Service *service
 
 static const char *GetParentalGenotypeSearchServiceInformationUri (const Service *service_p);
 
-static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource *resource_p, UserDetails *user_p);
+static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource *resource_p, User *user_p);
 
 static bool GetParentalGenotypeSearchServiceParameterTypesForNamedParameters (const Service *service_p, const char *param_name_s, ParameterType *pt_p);
 
 static void ReleaseParentalGenotypeSearchServiceParameters (Service *service_p, ParameterSet *params_p);
 
-static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, UserDetails *user_p, ProvidersStateTable *providers_p);
+static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, User *user_p, ProvidersStateTable *providers_p);
 
 static ParameterSet *IsResourceForParentalGenotypeSearchService (Service *service_p, DataResource *resource_p, Handler *handler_p);
 
@@ -157,7 +157,7 @@ static const char *GetParentalGenotypeSearchServiceInformationUri (const Service
 }
 
 
-static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
+static ParameterSet *GetParentalGenotypeSearchServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), User * UNUSED_PARAM (user_p))
 {
 	ParameterSet *param_set_p = AllocateParameterSet ("ParentalGenotype search service parameters", "The parameters used for the ParentalGenotype search service");
 
@@ -245,7 +245,7 @@ static bool CloseParentalGenotypeSearchService (Service *service_p)
 }
 
 
-static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, UserDetails * UNUSED_PARAM (user_p), ProvidersStateTable * UNUSED_PARAM (providers_p))
+static ServiceJobSet *RunParentalGenotypeSearchService (Service *service_p, ParameterSet *param_set_p, User * UNUSED_PARAM (user_p), ProvidersStateTable * UNUSED_PARAM (providers_p))
 {
 	ParentalGenotypeServiceData *data_p = (ParentalGenotypeServiceData *) (service_p -> se_data_p);
 

@@ -55,7 +55,7 @@
  */
 
 
-ServicesArray *GetServices (UserDetails *user_p, GrassrootsServer *grassroots_p)
+ServicesArray *GetServices (User *user_p, GrassrootsServer *grassroots_p)
 {
 	uint32 num_services = 0;
 	Service *submission_service_p = GetParentalGenotypeSubmissionService (grassroots_p);

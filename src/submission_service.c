@@ -50,11 +50,11 @@ static const char *GetParentalGenotypeSubmissionServiceAlias (const Service *ser
 
 static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Service *service_p);
 
-static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource *resource_p, UserDetails *user_p);
+static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource *resource_p, User *user_p);
 
 static void ReleaseParentalGenotypeSubmissionServiceParameters (Service *service_p, ParameterSet *params_p);
 
-static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, ParameterSet *param_set_p, UserDetails *user_p, ProvidersStateTable *providers_p);
+static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, ParameterSet *param_set_p, User *user_p, ProvidersStateTable *providers_p);
 
 static ParameterSet *IsResourceForParentalGenotypeSubmissionService (Service *service_p, DataResource *resource_p, Handler *handler_p);
 
@@ -161,7 +161,7 @@ static const char *GetParentalGenotypeSubmissionServiceInformationUri (const Ser
 }
 
 
-static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), UserDetails * UNUSED_PARAM (user_p))
+static ParameterSet *GetParentalGenotypeSubmissionServiceParameters (Service *service_p, DataResource * UNUSED_PARAM (resource_p), User * UNUSED_PARAM (user_p))
 {
 	ParameterSet *param_set_p = AllocateParameterSet ("Parental Genotype submission service parameters", "The parameters used for the Parental Genotype submission service");
 
@@ -230,7 +230,7 @@ static bool CloseParentalGenotypeSubmissionService (Service *service_p)
 
 
 
-static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, ParameterSet *param_set_p, UserDetails * UNUSED_PARAM (user_p), ProvidersStateTable * UNUSED_PARAM (providers_p))
+static ServiceJobSet *RunParentalGenotypeSubmissionService (Service *service_p, ParameterSet *param_set_p, User * UNUSED_PARAM (user_p), ProvidersStateTable * UNUSED_PARAM (providers_p))
 {
 	ParentalGenotypeServiceData *data_p = (ParentalGenotypeServiceData *) (service_p -> se_data_p);
 
